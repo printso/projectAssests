@@ -1,0 +1,25 @@
+[package]
+name = "spolia-storage"
+description = "Spolia 存储层：SQLite + FTS5 持久化、schema 迁移、各实体 Repository。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+spolia-domain = { workspace = true }
+rusqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lib]
+name = "spolia_storage"
+path = "src/lib.rs"

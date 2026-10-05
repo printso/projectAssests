@@ -1,0 +1,406 @@
+/* ==========================================================================
+   Spolia Desktop — 组件补充样式
+
+   🔴 本文件**只放 base.css 里没有、而 React 组件需要**的类。
+   设计 token（颜色/字号/间距）全部来自 tokens.css，
+   通用组件样式（.card / .btn / .state-box / .toast …）全部来自 base.css。
+   在这里重复定义它们会造成两套样式互相覆盖，
+   而且改一处忘了另一处时，视觉会以难以排查的方式漂移。
+   ========================================================================== */
+
+/* ---------- Toast 堆叠 ----------
+   base.css 的 .toast 是 position:fixed 且自带 translateX(-50%)，
+   那套定位是为"单条居中"设计的。多条堆叠时由外层 .toast-stack 统一定位，
+   单条改为静态流式布局，否则每条都会 fixed 到同一位置互相重叠。 */
+.toast--stacked {
+  position: static;
+  transform: translateY(12px);
+  width: 100%;
+  pointer-events: auto;
+}
+.toast--stacked.is-show {
+  transform: translateY(0);
+}
+
+/* ---------- 用户显式开启"减弱动效" ----------
+   🔴 效果必须与 base.css 的 `@media (prefers-reduced-motion: reduce)` 一致。
+
+   后端持久化了 `Settings.appearance.reduce_motion`，前端据此在 <html> 上设
+   `data-reduce-motion="true"`（见 useAppearance）。若只有那条媒体查询而没有这段，
+   设置页的开关就成了**假控件**：用户打开它、后端也存下了，界面却毫无反应。
+   这类"设置看似生效实则无效"的缺陷用户极难反馈清楚（他只会说"这个开关没用"）。
+
+   刻意放在 app.css 而非改 base.css：base.css 是原型设计系统的忠实副本，
+   保持不动才能随时整体重新同步，而不会与本地修改产生分歧。 */
+[data-reduce-motion="true"] *,
+[data-reduce-motion="true"] *::before,
+[data-reduce-motion="true"] *::after {
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important;
+  scroll-behavior: auto !important;
+}
+[data-reduce-motion="true"] .stat:hover,
+[data-reduce-motion="true"] .asset-card:hover,
+[data-reduce-motion="true"] .quick-item:hover,
+[data-reduce-motion="true"] .btn--primary:hover {
+  transform: none !important;
+}
+
+/* ---------- 页面级布局补充 ---------- */
+
+/* 内容区在数据加载时半透明，而非整块替换成骨架：
+   保留旧内容的位置感，避免筛选切换时界面"闪一下空白"。 */
+.is-refreshing {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity var(--t-base);
+}
+
+/* 🔴 `.page-head` / `.page-title` / `.page-sub` 已在 base.css 定义，这里**不重复**。
+   重复定义同一选择器会让两处样式互相覆盖，改一处忘另一处时视觉以难排查的方式漂移。
+   只补充 base.css 没有的 `.actions`（按钮组容器）。 */
+.page-head .actions {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* 筛选条：chips + 搜索框 + 排序，一行内自适应换行 */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+}
+.filter-bar .grow {
+  flex: 1;
+  min-width: 180px;
+}
+
+/* 结果计数行（"共 128 项 · 第 1-20 项"） */
+.result-meta {
+  color: var(--color-text-3);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-3);
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* 🔴 进度条复用 base.css 的 `.progress > i`（`<div class="progress"><i style="width:X%"/></div>`），
+   不另立 .progress-track/.progress-fill：两套进度条样式必然在动画时长/圆角上漂移。
+   这里只补一个"进行中"的语义类，用于给条子加呼吸动画。 */
+.progress.is-active > i {
+  background-image: var(--grad-bar), linear-gradient(90deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,0) 60%);
+  background-size: 100% 100%, 40% 100%;
+  background-repeat: no-repeat;
+  animation: progress-sheen 1.6s linear infinite;
+}
+@keyframes progress-sheen {
+  from { background-position: 0 0, -40% 0; }
+  to   { background-position: 0 0, 140% 0; }
+}
+
+/* ---------- 徽章：洞察处置状态 ----------
+   base.css 的 .badge--high/potent/info 表达"价值分档"，
+   而"待处理/已标记有用/已忽略"是**处置状态**，两个维度不能共用配色，
+   否则用户无法区分"这条有价值"和"我处理过这条"。 */
+.badge--state-pending {
+  color: var(--color-text-2);
+  background: var(--color-panel-3);
+  border: 1px solid var(--color-border);
+}
+.badge--state-useful {
+  color: var(--badge-high-text);
+  background: color-mix(in srgb, var(--color-success) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-success) 34%, transparent);
+}
+.badge--state-useless {
+  color: var(--color-text-3);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-border);
+  text-decoration: line-through;
+}
+.badge--state-ignored {
+  color: var(--color-text-3);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-border);
+}
+
+/* ---------- 证据文件：未通过校验的标记 ----------
+   🔴 AI 画像声称存在、但磁盘上找不到的文件必须视觉上区分。
+   让用户点一个不存在的路径，比不显示更糟。 */
+.evidence-file--missing {
+  color: var(--color-text-3);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+.evidence-file--missing::after {
+  content: "（未找到）";
+  font-size: var(--fs-xs);
+  margin-left: var(--sp-1);
+  text-decoration: none;
+  display: inline-block;
+}
+
+/* ---------- 引导卡（首页 onboarding） ---------- */
+.onboarding {
+  background: var(--grad-accent);
+  border: 1px solid var(--color-accent-border);
+  border-radius: var(--r-xl);
+  padding: var(--sp-5);
+  margin-bottom: var(--sp-5);
+}
+.onboarding h2 {
+  font-size: var(--fs-lg);
+  color: var(--color-accent-title);
+  margin: 0 0 var(--sp-4);
+}
+.onboarding-step {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--color-accent-box-border);
+}
+.onboarding-step:first-of-type {
+  border-top: none;
+}
+.onboarding-step .num {
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: var(--r-full);
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  background: var(--color-accent-box);
+  color: var(--color-accent-text);
+  border: 1px solid var(--color-accent-box-border);
+}
+.onboarding-step.is-done .num {
+  background: color-mix(in srgb, var(--color-success) 20%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
+  color: var(--badge-high-text);
+}
+.onboarding-step .body {
+  flex: 1;
+  min-width: 0;
+}
+.onboarding-step .title {
+  color: var(--color-accent-text);
+  font-weight: 600;
+  font-size: var(--fs-md);
+}
+.onboarding-step.is-done .title {
+  color: var(--color-text-3);
+  text-decoration: line-through;
+}
+.onboarding-step .detail {
+  color: var(--color-text-2);
+  font-size: var(--fs-sm);
+  margin-top: 2px;
+}
+
+/* ---------- 键值行（详情页通用） ---------- */
+.kv-row {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: var(--sp-3);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--fs-base);
+}
+.kv-row:last-child {
+  border-bottom: none;
+}
+.kv-row .k {
+  color: var(--color-text-3);
+}
+.kv-row .v {
+  color: var(--color-text);
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* ---------- 代码片段（资产详情） ---------- */
+.code-block {
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.65;
+  color: #d6deeb;
+  white-space: pre;
+  tab-size: 2;
+}
+
+/* ---------- 空行内提示（卡片内的局部空态） ---------- */
+.inline-empty {
+  color: var(--color-text-3);
+  font-size: var(--fs-sm);
+  padding: var(--sp-3) 0;
+}
+
+/* ---------- 对话（分析师） ---------- */
+.chat-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-4);
+}
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-width: 100%;
+}
+.chat-msg.is-user {
+  align-items: flex-end;
+}
+.chat-bubble {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-lg);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-border);
+  font-size: var(--fs-md);
+  line-height: var(--lh-base);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 76ch;
+}
+.chat-msg.is-user .chat-bubble {
+  background: var(--color-accent-box);
+  border-color: var(--color-accent-box-border);
+  color: var(--color-accent-text);
+}
+.chat-meta {
+  font-size: var(--fs-xs);
+  color: var(--color-text-3);
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* 引用列表：点击跳转到出处 */
+.citation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.citation-item {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-border);
+  font-size: var(--fs-sm);
+  text-align: left;
+  width: 100%;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.citation-item:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-panel-3);
+}
+.citation-item .kind {
+  flex: 0 0 auto;
+  color: var(--color-text-3);
+  font-size: var(--fs-xs);
+  padding-top: 1px;
+}
+.citation-item .label {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text);
+  word-break: break-word;
+}
+.citation-item .supports {
+  color: var(--color-text-3);
+  font-size: var(--fs-xs);
+  margin-top: 2px;
+}
+
+/* ---------- 服务未连接引导页 ----------
+   🔴 这是桌面应用最常见的首次使用障碍，所以给它完整的一屏，
+   而不是一个 toast 或页面内的小错误框——用户此刻唯一需要知道的是
+   "服务没起来"以及"怎么把它启动起来"。 */
+.service-gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-6);
+  background: var(--color-bg);
+}
+.service-gate-card {
+  max-width: 560px;
+  width: 100%;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-xl);
+  padding: var(--sp-8);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.service-gate-card h1 {
+  font-size: var(--fs-xl);
+  margin: var(--sp-4) 0 var(--sp-2);
+}
+.service-gate-card > p {
+  color: var(--color-text-2);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+}
+.service-gate-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--color-danger);
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-border);
+}
+.service-gate-icon svg.ico { width: 24px; height: 24px; }
+.service-gate-steps {
+  margin-top: var(--sp-6);
+  padding: var(--sp-4);
+  text-align: left;
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+}
+.service-gate-steps .t {
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-md);
+}
+.service-gate-steps p {
+  color: var(--color-text-2);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-2);
+}
+.service-gate-steps pre {
+  margin: 0;
+  text-align: left;
+  white-space: pre-wrap;
+}
+.service-gate-steps code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spolia — Your Personal R&amp;D OS（原型）</title>
+  <!--
+    原型入口 (SPA, hash-free 内存路由)
+    设计来源: docs/设计图/首页.png · 项目预览页.png · 全局.png
+    说明: 零依赖纯静态实现, file:// 直接打开即可; 详见 README.md
+  -->
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <div class="app" id="app" aria-busy="true"></div>
+  <script src="js/mock-data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

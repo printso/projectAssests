@@ -1,0 +1,25 @@
+[package]
+name = "spolia-search"
+description = "Spolia 混合检索：FTS5 关键词召回 + 结构化过滤 + 重排 + 排序理由。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+spolia-domain = { workspace = true }
+spolia-storage = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+# 新鲜度评分需要"距今天数"；now 由调用方注入（可复现），但类型仍来自 chrono
+chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lib]
+name = "spolia_search"
+path = "src/lib.rs"

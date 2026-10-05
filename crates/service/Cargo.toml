@@ -1,0 +1,31 @@
+[package]
+name = "spolia-service"
+description = "Spolia 应用服务层：编排各引擎完成业务用例，与传输方式（HTTP / Tauri IPC）无关。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+spolia-domain = { workspace = true }
+spolia-storage = { workspace = true }
+spolia-scanner = { workspace = true }
+spolia-asset = { workspace = true }
+spolia-insight = { workspace = true }
+spolia-search = { workspace = true }
+spolia-jobs = { workspace = true }
+spolia-ai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lib]
+name = "spolia_service"
+path = "src/lib.rs"

@@ -1,0 +1,22 @@
+[package]
+name = "spolia-mcp"
+description = "Spolia MCP Server：JSON-RPC 协议实现，暴露 8 个受控工具供 AI Coding Agent 调用。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+spolia-domain = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lib]
+name = "spolia_mcp"
+path = "src/lib.rs"

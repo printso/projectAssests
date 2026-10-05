@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spolia — Your Personal R&amp;D OS</title>
+    <!--
+      🔴 内联脚本只做一件事：在 React 挂载前应用缓存的主题，避免首屏闪烁。
+
+      为什么不用 CSS 媒体查询代替：主题偏好是**用户显式选择**并存在后端的，
+      与系统偏好可以不同（系统是浅色但用户想要深色工作台）。
+      等 React 挂载后再从后端读设置会产生一帧默认主题，视觉上"闪一下"。
+
+      为什么允许读 localStorage：这里它只是"上次值的缓存"，不是真相源。
+      真相源是后端 Settings.appearance（见 useAppearance）。
+      缓存丢了最多闪一下，不会造成持久的不一致。
+    -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("spolia.theme.cache");
+          if (t === "light" || t === "dark") {
+            document.documentElement.dataset.theme = t;
+          }
+        } catch (e) {
+          /* localStorage 不可用（隐私模式）时静默降级为默认深色 */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

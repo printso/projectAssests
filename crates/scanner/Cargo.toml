@@ -1,0 +1,27 @@
+[package]
+name = "spolia-scanner"
+description = "Spolia 扫描器：目录遍历、项目发现、静态分析、Git 历史、活跃度与健康度。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+spolia-domain = { workspace = true }
+ignore = { workspace = true }
+walkdir = { workspace = true }
+globset = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lib]
+name = "spolia_scanner"
+path = "src/lib.rs"

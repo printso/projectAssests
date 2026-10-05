@@ -1,0 +1,54 @@
+# ============================================================
+# Spolia — .gitignore
+# 本地优先桌面软件：避免把本机数据 / 构建产物 / 依赖推上 GitHub。
+# ============================================================
+
+# ── Rust 构建产物 ──
+/target/
+# 排查 / 验证用的独立构建目录（编译验证副本，非交付物，体积巨大）
+target-probefix/
+target-uxcheck/
+**/*.rs.bk
+Cargo.lock.bak
+
+# ── Node / 前端 ──
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# ── 数据库与派生数据（绝不入库：含用户本机代码的索引）──
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ── 编辑器 / 系统 ──
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+Thumbs.db
+
+# ── 日志与临时产物 ──
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── 环境变量（可能含 API Key，绝不入库）──
+.env
+.env.*
+!.env.example
+
+# ── 项目内部资料（默认不随公开仓库发布）──
+# 如需把设计文档（产品 / 技术设计书等）纳入版本库，删除下一行即可。
+docs/*
+
+# ── WorkBuddy 项目数据（记忆 / 会话，含个人信息，绝不入库）──
+.workbuddy/

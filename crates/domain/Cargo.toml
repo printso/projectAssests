@@ -1,0 +1,20 @@
+[package]
+name = "spolia-domain"
+description = "Spolia 领域模型：八类资产、能力三层结构、关系、洞察、机会、任务。纯类型定义，无 IO 依赖。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+# 日期解析与"距今天数"属领域规则（状态推断/健康度都依赖它），
+# 且 chrono 是纯计算库，不引入任何 IO —— 不违背"无 IO 依赖"的定位。
+chrono = { workspace = true }
+
+[lib]
+name = "spolia_domain"
+path = "src/lib.rs"

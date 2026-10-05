@@ -1,0 +1,24 @@
+[package]
+name = "spolia-asset"
+description = "Spolia 资产引擎：符号抽取、reuse_score 评分、三层能力抽取、跨项目关系构建。"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+spolia-domain = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+globset = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lib]
+name = "spolia_asset"
+path = "src/lib.rs"
