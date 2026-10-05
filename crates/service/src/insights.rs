@@ -13,10 +13,10 @@
 //! 显示"采纳率 0%"会让用户以为功能没用，而真相是还没人投过票。
 
 use serde::{Deserialize, Serialize};
-use spolia_domain::{
+use projectassests_domain::{
     Insight, InsightType, Opportunity, OpportunityStatus, UserFeedback,
 };
-use spolia_storage::{InsightFilter, OpportunityFilter};
+use projectassests_storage::{InsightFilter, OpportunityFilter};
 
 use crate::context::{ServiceContext, ServiceError};
 
@@ -280,7 +280,7 @@ pub struct OpportunityDetail {
     #[serde(flatten)]
     pub item: OpportunityItem,
     /// 深入分析；未生成时为 `None`（前端显示"展开分析"按钮而非空白）
-    pub analysis: Option<spolia_domain::OpportunityAnalysis>,
+    pub analysis: Option<projectassests_domain::OpportunityAnalysis>,
 }
 
 /// 洞察与机会的汇总统计（洞察页头部）。
@@ -496,7 +496,7 @@ pub fn dismiss_all(ctx: &ServiceContext) -> Result<usize, ServiceError> {
     if n > 0 {
         // 批量处置会影响"采纳率"这类指标的解释，留痕
         let _ = ctx.db.activities().push(
-            spolia_storage::ActivityIcon::Check,
+            projectassests_storage::ActivityIcon::Check,
             "批量忽略机会",
             format!("已忽略 {n} 条组合机会"),
         );
@@ -569,7 +569,7 @@ fn item(i: &Insight, now: chrono::DateTime<chrono::Utc>) -> InsightItem {
         confidence_percent: (i.confidence.clamp(0.0, 1.0) * 100.0).round() as u8,
         tags: i.tags.clone(),
         created_at: i.created_at.clone(),
-        created_relative: spolia_storage::relative_time(&i.created_at, now),
+        created_relative: projectassests_storage::relative_time(&i.created_at, now),
         // 🔴 与首页、项目详情页同源：都走 `Insight::badge()`
         badge: badge.label_zh().to_string(),
         badge_key: badge.as_str().to_string(),
@@ -603,7 +603,7 @@ fn state_of(i: &Insight) -> (&'static str, String) {
     }
 }
 
-fn evidence_view(e: &spolia_domain::EvidenceItem) -> EvidenceView {
+fn evidence_view(e: &projectassests_domain::EvidenceItem) -> EvidenceView {
     EvidenceView {
         kind: e.kind.as_str().to_string(),
         kind_label: evidence_kind_label(&e.kind),
@@ -612,12 +612,12 @@ fn evidence_view(e: &spolia_domain::EvidenceItem) -> EvidenceView {
     }
 }
 
-fn evidence_kind_label(k: &spolia_domain::EvidenceKind) -> String {
+fn evidence_kind_label(k: &projectassests_domain::EvidenceKind) -> String {
     match k {
-        spolia_domain::EvidenceKind::File => "文件",
-        spolia_domain::EvidenceKind::Project => "项目",
-        spolia_domain::EvidenceKind::Commit => "提交",
-        spolia_domain::EvidenceKind::Symbol => "符号",
+        projectassests_domain::EvidenceKind::File => "文件",
+        projectassests_domain::EvidenceKind::Project => "项目",
+        projectassests_domain::EvidenceKind::Commit => "提交",
+        projectassests_domain::EvidenceKind::Symbol => "符号",
     }
     .to_string()
 }
@@ -730,7 +730,7 @@ fn opp_item(
         status: o.status.as_str().to_string(),
         status_label: o.status.label_zh().to_string(),
         created_at: o.created_at.clone(),
-        created_relative: spolia_storage::relative_time(&o.created_at, now),
+        created_relative: projectassests_storage::relative_time(&o.created_at, now),
         source_projects: related_projects(ctx, &o.source_project_ids)?,
         actionable: o.status.is_actionable(),
         // 🔴 由调用方传入：`Opportunity` 结构不含 analysis 列（单独存 analysis_json），
@@ -856,7 +856,7 @@ fn non_empty(s: &Option<String>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{
+    use projectassests_domain::{
         Asset, AssetType, CodeStats, Evidence, EvidenceItem, EvidenceKind, OpportunityAnalysis,
         Project, ProjectStatus, ScanFacts,
     };
@@ -901,7 +901,7 @@ mod tests {
                 })
                 .collect(),
             confidence,
-            created_at: spolia_storage::now_utc(),
+            created_at: projectassests_storage::now_utc(),
             user_feedback: None,
             tags: vec!["queue".into()],
             related_project_ids: vec!["p1".into()],
@@ -923,7 +923,7 @@ mod tests {
             why: "3 个历史项目存在能力重合".into(),
             evidence: vec!["src/queue.rs".into()],
             status,
-            created_at: spolia_storage::now_utc(),
+            created_at: projectassests_storage::now_utc(),
         }
     }
 
@@ -941,7 +941,7 @@ mod tests {
             generality: 0.7,
             stability: 0.6,
             tags: vec![],
-            created_at: spolia_storage::now_utc(),
+            created_at: projectassests_storage::now_utc(),
             evidence: Evidence {
                 files: vec!["src/queue.rs".into()],
                 ..Evidence::default()

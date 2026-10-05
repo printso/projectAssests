@@ -1,4 +1,4 @@
-//! Spolia 混合检索层。
+//! projectAssests 混合检索层。
 //!
 //! 《技术设计书》§12 定的是**混合检索，而非纯向量**：
 //! ```text
@@ -25,7 +25,7 @@
 //!    否则"刷新一次顺序就变"，用户无法建立对结果的信任，快照测试也会随机失败。
 //!
 //! # 依赖方向
-//! 本 crate 依赖 `spolia-storage` 取数据，但**自身不出现任何 SQL**。
+//! 本 crate 依赖 `projectassests-storage` 取数据，但**自身不出现任何 SQL**。
 //! 换检索后端（例如《技术设计书》§25 提到的向量层）时，
 //! 改动限于 storage 的 `fts.rs`，本 crate 与上层 API 都不受影响。
 
@@ -44,11 +44,11 @@ pub use snippet::{highlight, plain, strip_marks, CONTEXT_CHARS, SNIPPET_CHARS};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{
+    use projectassests_domain::{
         Asset, AssetType, Capability, CapabilityLayer, CodeStats, Evidence, Project, ProjectStatus,
         SearchQuery, SortBy,
     };
-    use spolia_storage::Database;
+    use projectassests_storage::Database;
 
     fn now() -> chrono::DateTime<chrono::Utc> {
         chrono::DateTime::parse_from_rfc3339("2026-09-29T00:00:00Z")
@@ -79,7 +79,7 @@ mod tests {
                 modules: 3,
                 languages: vec![],
             },
-            scan: spolia_domain::ScanFacts::default(),
+            scan: projectassests_domain::ScanFacts::default(),
             ai_profile: None,
         }
     }
@@ -140,8 +140,8 @@ mod tests {
         assert_eq!(strip_marks("<mark>x</mark>"), "x");
         assert_eq!(plain("视频流程", &["视频".to_string()]), "视频流程");
         assert!(scope_includes(
-            spolia_domain::SearchScope::All,
-            spolia_domain::SearchScope::Assets
+            projectassests_domain::SearchScope::All,
+            projectassests_domain::SearchScope::Assets
         ));
         assert_eq!(query_terms("a b").len(), 2);
         // 相关性排序不产出显式主键（由综合分决定）
@@ -186,9 +186,9 @@ mod tests {
         // 默认查询为空串 → 浏览模式，应能列出三类实体
         assert_eq!(r.hits.len(), 3, "浏览模式应覆盖三类实体");
         let kinds: Vec<_> = r.hits.iter().map(|h| h.kind).collect();
-        assert!(kinds.contains(&spolia_domain::HitKind::Project));
-        assert!(kinds.contains(&spolia_domain::HitKind::Asset));
-        assert!(kinds.contains(&spolia_domain::HitKind::Capability));
+        assert!(kinds.contains(&projectassests_domain::HitKind::Project));
+        assert!(kinds.contains(&projectassests_domain::HitKind::Asset));
+        assert!(kinds.contains(&projectassests_domain::HitKind::Capability));
         for h in &r.hits {
             assert!(!h.reasons.is_empty(), "{} 缺少理由", h.id);
             assert!(!h.snippet.is_empty(), "{} 缺少片段", h.id);

@@ -1,6 +1,6 @@
 [package]
-name = "spolia-insight"
-description = "Spolia 洞察与机会引擎：重复能力检测、高复用组件、遗忘资产、技术方向、机会组合生成。"
+name = "projectassests-insight"
+description = "projectAssests 洞察与机会引擎：重复能力检测、高复用组件、遗忘资产、技术方向、机会组合生成。"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-spolia-domain = { workspace = true }
+projectassests-domain = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -18,9 +18,9 @@ chrono = { workspace = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 # 参照表一致性测试需要校验"领域键与能力名是否与资产引擎对得上"，
-# 因此把 spolia-asset 作为 dev 依赖（运行时不依赖，避免循环）。
-spolia-asset = { path = "../asset" }
+# 因此把 projectassests-asset 作为 dev 依赖（运行时不依赖，避免循环）。
+projectassests-asset = { path = "../asset" }
 
 [lib]
-name = "spolia_insight"
+name = "projectassests_insight"
 path = "src/lib.rs"

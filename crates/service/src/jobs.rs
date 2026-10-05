@@ -16,8 +16,8 @@
 //! 两者共用 `ProgressEvent`，适配器决定用哪种传输。
 
 use serde::{Deserialize, Serialize};
-use spolia_domain::{Job, JobType};
-use spolia_jobs::ProgressEvent;
+use projectassests_domain::{Job, JobType};
+use projectassests_jobs::ProgressEvent;
 
 use crate::context::{ServiceContext, ServiceError};
 
@@ -365,7 +365,7 @@ pub fn progress(ctx: &ServiceContext) -> Result<ProgressSnapshot, ServiceError> 
 ///
 /// 返回订阅句柄而非直接的流：适配器决定怎么把它变成
 /// SSE 的 `data:` 帧或 Tauri 的 `emit`，service 不感知传输协议。
-pub fn subscribe(ctx: &ServiceContext) -> spolia_jobs::ProgressSubscription {
+pub fn subscribe(ctx: &ServiceContext) -> projectassests_jobs::ProgressSubscription {
     ctx.jobs.subscribe()
 }
 
@@ -437,7 +437,7 @@ fn job_view(j: &Job, now: chrono::DateTime<chrono::Utc>) -> JobView {
         },
         error: j.error.clone(),
         created_at: j.created_at.clone(),
-        updated_at: spolia_storage::relative_time(&j.updated_at, now),
+        updated_at: projectassests_storage::relative_time(&j.updated_at, now),
         cancellable: !j.status.is_terminal(),
     }
 }
@@ -445,7 +445,7 @@ fn job_view(j: &Job, now: chrono::DateTime<chrono::Utc>) -> JobView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{CodeStats, JobStatus, Project, ProjectStatus, ScanFacts, Settings};
+    use projectassests_domain::{CodeStats, JobStatus, Project, ProjectStatus, ScanFacts, Settings};
 
     fn ctx() -> ServiceContext {
         ServiceContext::in_memory().unwrap()
@@ -477,10 +477,10 @@ mod tests {
         let mut s = c.db.settings().get_or_default().unwrap();
         s.scan.dirs = dirs
             .into_iter()
-            .map(|(path, enabled)| spolia_domain::ScanDir {
+            .map(|(path, enabled)| projectassests_domain::ScanDir {
                 path: path.to_string(),
                 enabled,
-                added_at: spolia_storage::now_utc(),
+                added_at: projectassests_storage::now_utc(),
                 last_scanned_at: None,
                 project_count: None,
             })
@@ -811,8 +811,8 @@ mod tests {
             total: Some(183),
             error: None,
             payload: None,
-            created_at: spolia_storage::now_utc(),
-            updated_at: spolia_storage::now_utc(),
+            created_at: projectassests_storage::now_utc(),
+            updated_at: projectassests_storage::now_utc(),
         };
         let v = job_view(&j, now);
         assert_eq!(v.percent, 46, "四舍五入而非截断");
@@ -834,8 +834,8 @@ mod tests {
             total: Some(0),
             error: None,
             payload: None,
-            created_at: spolia_storage::now_utc(),
-            updated_at: spolia_storage::now_utc(),
+            created_at: projectassests_storage::now_utc(),
+            updated_at: projectassests_storage::now_utc(),
         };
         let v = job_view(&j, now);
         // 🔴 total=0 时不能显示 "0 / 0"，前端应隐藏该段
@@ -857,8 +857,8 @@ mod tests {
             total: None,
             error: None,
             payload: None,
-            created_at: spolia_storage::now_utc(),
-            updated_at: spolia_storage::now_utc(),
+            created_at: projectassests_storage::now_utc(),
+            updated_at: projectassests_storage::now_utc(),
         };
         assert_eq!(job_view(&j, now).percent, 100);
         j.progress = -0.3;

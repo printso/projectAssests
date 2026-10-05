@@ -319,7 +319,7 @@ impl GitAnalyzer {
 /// 执行 git 命令并返回 stdout。
 ///
 /// 刻意用同步 `Command`：扫描是 IO 密集型的批处理，
-/// 上层（`spolia-jobs`）已经用 tokio 的 `spawn_blocking` 隔离，
+/// 上层（`projectassests-jobs`）已经用 tokio 的 `spawn_blocking` 隔离，
 /// 在这里再引入 async 只会增加复杂度而无收益。
 fn run_git(bin: &str, dir: &Path, args: &[&str]) -> Result<String, String> {
     let output = Command::new(bin)
@@ -414,7 +414,7 @@ pub fn mtime_of_newest_file(dir: &Path, max_files: usize) -> Option<chrono::Date
         .into_iter()
         .filter_entry(|e| {
             let name = e.file_name().to_string_lossy();
-            !spolia_domain_scanner_excluded(&name)
+            !projectassests_domain_scanner_excluded(&name)
         })
     {
         if seen >= max_files {
@@ -436,7 +436,7 @@ pub fn mtime_of_newest_file(dir: &Path, max_files: usize) -> Option<chrono::Date
 }
 
 /// 排除判定（复用 markers 模块的规则，避免两处维护同一份清单）。
-fn spolia_domain_scanner_excluded(name: &str) -> bool {
+fn projectassests_domain_scanner_excluded(name: &str) -> bool {
     crate::markers::is_always_excluded(name)
 }
 

@@ -56,7 +56,7 @@ export function Sidebar({ health, onNavigate }: SidebarProps) {
       <div className="brand">
         <div className="brand-logo">S</div>
         <div>
-          <div className="brand-name">Spolia</div>
+          <div className="brand-name">projectAssests</div>
           <div className="brand-sub">Your Personal R&amp;D OS</div>
         </div>
       </div>
@@ -255,7 +255,7 @@ function OfflineCard({ status, onRetry }: { status: ServiceStatus; onRetry: () =
       <div className="meta" style={{ marginTop: 6 }}>
         {checking
           ? "正在连接本地服务…"
-          : "本地服务未响应，正在自动重连。请确认已启动 spolia-server。"}
+          : "本地服务未响应，正在自动重连。请确认已启动 projectassests-server。"}
       </div>
       {checking ? null : (
         <button

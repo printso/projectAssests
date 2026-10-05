@@ -1,4 +1,4 @@
-//! Spolia AI 层：模型抽象、路由、连接自检、确定性回退。
+//! projectAssests AI 层：模型抽象、路由、连接自检、确定性回退。
 //!
 //! # 分层
 //! | 模块 | 职责 |
@@ -44,7 +44,7 @@ pub use router::{AiRouter, RouterConfig, TestConnectionOutcome};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{AiError, LlmSettings, LocalBackend, RouteTarget};
+    use projectassests_domain::{AiError, LlmSettings, LocalBackend, RouteTarget};
 
     fn local_settings() -> LlmSettings {
         LlmSettings {
@@ -70,7 +70,7 @@ mod tests {
 
         // 路由解析
         let resolved =
-            ResolvedModel::resolve(&local_settings(), spolia_domain::JobType::AnalyzeProject, false)
+            ResolvedModel::resolve(&local_settings(), projectassests_domain::JobType::AnalyzeProject, false)
                 .unwrap();
         assert!(resolved.is_local());
 
@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn router_builds_for_local_settings() {
         let router = AiRouter::new(RouterConfig::default());
-        let provider = router.provider_for(&local_settings(), spolia_domain::JobType::AnalyzeProject, false);
+        let provider = router.provider_for(&local_settings(), projectassests_domain::JobType::AnalyzeProject, false);
         // 本地后端 Ollama → 应得到 ollama provider
         assert!(provider.is_some());
         assert_eq!(provider.unwrap().name(), OLLAMA_PROVIDER_NAME);
@@ -100,7 +100,7 @@ mod tests {
 
         let router = AiRouter::new(RouterConfig::default());
         let p = router
-            .provider_for(&s, spolia_domain::JobType::DiscoverOpportunity, true)
+            .provider_for(&s, projectassests_domain::JobType::DiscoverOpportunity, true)
             .unwrap();
         // 敏感项目深度分析：路由本想走云端，必须被拉回本地
         assert_eq!(p.name(), OLLAMA_PROVIDER_NAME, "敏感项目不得走云端 provider");
@@ -114,7 +114,7 @@ mod tests {
         let router = AiRouter::new(RouterConfig::default());
         assert!(
             router
-                .provider_for(&s, spolia_domain::JobType::AnalyzeProject, false)
+                .provider_for(&s, projectassests_domain::JobType::AnalyzeProject, false)
                 .is_none(),
             "未配置时不该产出 provider"
         );

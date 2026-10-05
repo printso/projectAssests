@@ -2,7 +2,7 @@
  * 主题（深色/浅色）与减弱动效。
  *
  * # 🔴 唯一真相源是后端设置，不是 localStorage
- * 原型的主题存在 `localStorage`（`LS_KEY = "spolia.theme"`），
+ * 原型的主题存在 `localStorage`（`LS_KEY = "projectassests.theme"`），
  * 而后端 `Settings.appearance` 里**也有** theme 字段。两处并存必然漂移：
  * 用户在界面切成浅色，重启后后端设置仍是深色，主题自己跳回去。
  *
@@ -25,7 +25,7 @@ import type { AppearanceSettings } from "@/api/types";
 export type Theme = AppearanceSettings["theme"];
 
 /** localStorage 缓存键（仅用于避免首屏闪烁，非真相源）。 */
-const THEME_CACHE_KEY = "spolia.theme.cache";
+const THEME_CACHE_KEY = "projectassests.theme.cache";
 
 export function readCachedTheme(): Theme | null {
   try {

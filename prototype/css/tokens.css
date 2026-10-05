@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Spolia Prototype — Design Tokens
+   projectAssests Prototype — Design Tokens
    设计来源: docs/设计图/首页.png、项目预览页.png、全局.png
    说明: 全部视觉决策以 CSS 变量表达, 组件层禁止裸值; 深色为默认主题,
          亮色主题通过 [data-theme="light"] 覆盖同名变量实现。

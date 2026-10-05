@@ -22,7 +22,7 @@
 
 use rusqlite::{Error as SqliteError, ErrorCode};
 
-use spolia_domain::StorageError;
+use projectassests_domain::StorageError;
 
 /// 把驱动错误转成领域错误，**并识别锁竞争**。
 ///

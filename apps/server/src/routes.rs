@@ -1,7 +1,7 @@
 //! HTTP 适配器：路由表 + handler。
 //!
 //! # 🔴 这一层的唯一职责
-//! 解析参数 → 调用 `spolia_service` → 把 `Result` 映射成 HTTP 响应。
+//! 解析参数 → 调用 `projectassests_service` → 把 `Result` 映射成 HTTP 响应。
 //! **一行业务逻辑都不许写在这里。**
 //!
 //! 判据很简单：如果某个判断在 Tauri IPC 适配器里也得再写一遍，
@@ -33,8 +33,8 @@ use axum::{
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
-use spolia_service as svc;
-use spolia_service::{ServiceContext, ServiceError};
+use projectassests_service as svc;
+use projectassests_service::{ServiceContext, ServiceError};
 
 // 🔴 请求体 / 查询参数一律走 `JsonBody` / `QueryOf`，而非 axum 内建的
 // `Json` / `Query`：内建提取器拒绝请求时返回**纯文本**，绕过统一信封，
@@ -551,7 +551,7 @@ async fn events(
 /// 🔴 序列化失败时发一个错误事件而不是静默跳过：
 /// 客户端需要知道"连接还活着但数据坏了"，
 /// 静默跳过会让前端一直等一个永远不会来的进度更新。
-fn progress_event(ev: &spolia_jobs::ProgressEvent) -> Event {
+fn progress_event(ev: &projectassests_jobs::ProgressEvent) -> Event {
     match serde_json::to_string(ev) {
         Ok(json) => Event::default().event("progress").data(json),
         Err(e) => Event::default()
@@ -1069,10 +1069,10 @@ mod tests {
 
     #[test]
     fn progress_event_serializes_to_sse_frame() {
-        let ev = spolia_jobs::ProgressEvent {
+        let ev = projectassests_jobs::ProgressEvent {
             job_id: "j1".into(),
             job_type: "SCAN_PROJECT".into(),
-            status: spolia_domain::JobStatus::Running,
+            status: projectassests_domain::JobStatus::Running,
             progress: 0.5,
             stage: Some("扫描目录".into()),
             processed: Some(10),

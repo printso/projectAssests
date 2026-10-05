@@ -1,4 +1,4 @@
-//! Spolia 任务引擎：可取消任务队列、进度广播、任务持久化。
+//! projectAssests 任务引擎：可取消任务队列、进度广播、任务持久化。
 //!
 //! # 设计红线（《技术设计书》§15）
 //! 1. **UI 不允许直接调用 `scan()` / `analyze()`**——一切走任务队列。
@@ -41,7 +41,7 @@ pub use walk::{
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{JobStatus, JobType};
+    use projectassests_domain::{JobStatus, JobType};
 
     /// 公开 API 可达性 + 关键常量（用精确值断言，误改时测试才会红）。
     #[test]

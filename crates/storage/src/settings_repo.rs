@@ -5,7 +5,7 @@
 
 use rusqlite::{params, OptionalExtension};
 
-use spolia_domain::{
+use projectassests_domain::{
     AppearanceSettings, AuditEntry, LlmSettings, RouteTarget, ScanSettings, Settings, StorageError,
 };
 
@@ -276,7 +276,7 @@ impl<'a> SettingsRepo<'a> {
 mod tests {
     use super::*;
     use crate::Database;
-    use spolia_domain::{CloudProvider, LocalBackend, ScanDir, Theme};
+    use projectassests_domain::{CloudProvider, LocalBackend, ScanDir, Theme};
 
     fn db() -> Database {
         Database::in_memory().unwrap()

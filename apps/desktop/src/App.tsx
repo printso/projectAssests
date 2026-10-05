@@ -2,7 +2,7 @@
  * 应用外壳与路由。
  *
  * # 🔴 服务离线时不渲染任何页面
- * Spolia 是桌面前端 + 本地 Rust 服务的双进程结构。服务没起来时，
+ * projectAssests 是桌面前端 + 本地 Rust 服务的双进程结构。服务没起来时，
  * 每个页面都会各自请求失败并显示错误态——用户看到七八个"加载失败"，
  * 而根因只有"服务未连接"一个。
  *
@@ -124,7 +124,7 @@ function ServiceGate({
         <div className="service-gate-card">
           <Icon name="refresh" style={{ animation: "spin 1.2s linear infinite" }} />
           <h1>正在连接本地服务…</h1>
-          <p>Spolia 的前端需要连接本地 Rust 服务才能读取你的项目数据。</p>
+          <p>projectAssests 的前端需要连接本地 Rust 服务才能读取你的项目数据。</p>
         </div>
       </div>
     );
@@ -137,7 +137,7 @@ function ServiceGate({
           <Icon name="alert" />
         </div>
         <h1>本地服务未连接</h1>
-        <p>{reason ?? "无法连接到 Spolia 本地服务。"}</p>
+        <p>{reason ?? "无法连接到 projectAssests 本地服务。"}</p>
 
         <div className="service-gate-steps">
           <div className="t">启动服务</div>
@@ -145,7 +145,7 @@ function ServiceGate({
           <pre className="code-block">
             <code>
               {`source scripts/msvc-env.sh
-cargo run -p spolia-server`}
+cargo run -p projectassests-server`}
             </code>
           </pre>
           <p style={{ marginTop: 8 }}>

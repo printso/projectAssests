@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use spolia_domain::ScannerError;
+use projectassests_domain::ScannerError;
 
 use crate::deps::{parse_manifests, Dependencies};
 use crate::git::{mtime_of_newest_file, to_iso_date, GitAnalyzer, GitInfo};
@@ -157,7 +157,7 @@ pub struct ScannedStats {
     pub loc: usize,
     pub symbols: usize,
     pub modules: usize,
-    pub languages: Vec<spolia_domain::LanguageShare>,
+    pub languages: Vec<projectassests_domain::LanguageShare>,
     /// 因判定为生成物而跳过的文件数（诊断用）
     pub skipped_generated: usize,
     /// 未知扩展名文件数
@@ -585,7 +585,7 @@ impl Scanner {
             languages: breakdown
                 .languages
                 .into_iter()
-                .map(|l| spolia_domain::LanguageShare {
+                .map(|l| projectassests_domain::LanguageShare {
                     name: l.name,
                     pct: l.pct,
                     loc: l.loc,
@@ -635,7 +635,7 @@ pub fn project_id_from_path(path: &Path) -> String {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     // 归一化：统一分隔符并小写盘符，避免 `D:\A` 与 `d:/a` 生成不同 id
-    let normalized = spolia_domain::normalize_path(&path.display().to_string());
+    let normalized = projectassests_domain::normalize_path(&path.display().to_string());
     normalized.hash(&mut hasher);
     let hash = hasher.finish();
     // 前缀用目录名，让 id 在日志与数据库里可读（否则全是十六进制无法排查）
@@ -925,8 +925,8 @@ fn build_matcher(patterns: &[String]) -> Result<Option<globset::GlobSet>, Scanne
 pub fn to_domain_project(
     scanned: &ScannedProject,
     now: chrono::DateTime<chrono::Utc>,
-) -> spolia_domain::Project {
-    use spolia_domain::{CodeStats, Project};
+) -> projectassests_domain::Project {
+    use projectassests_domain::{CodeStats, Project};
 
     // 最后活动时间：Git 提交时间优先，其次文件 mtime
     let last_commit_at = scanned.git.last_commit_at.clone().map(|t| truncate_to_date(&t));
@@ -950,7 +950,7 @@ pub fn to_domain_project(
 
     // 距今天数：复用 domain 的统一实现（同一口径决定状态推断、健康度、
     // 洞察的"遗忘资产"与搜索的新鲜度排序；此处再写一份必然漂移）
-    let days_since = spolia_domain::days_since_latest(
+    let days_since = projectassests_domain::days_since_latest(
         &[last_commit_at.as_deref(), updated_at.as_deref()],
         now,
     );
@@ -991,7 +991,7 @@ pub fn to_domain_project(
         // 扫描事实：此处正持有真实 Git 数据，直接填充而非留默认值。
         // scanned_at 留给 pipeline 的 update_scan_facts 统一写入，
         // 保证它与"本轮扫描的落库时间"一致（而非扫描开始时间）。
-        scan: spolia_domain::ScanFacts {
+        scan: projectassests_domain::ScanFacts {
             git_commits: scanned.git.commit_count,
             has_git: scanned.detection.has_git,
             has_readme: scanned.detection.has_readme,
@@ -1517,7 +1517,7 @@ mod tests {
     #[test]
     fn missing_root_reports_dir_not_found() {
         let scanner = Scanner::new(ScanConfig {
-            roots: vec![PathBuf::from(if cfg!(windows) { "Q:\\does\\not\\exist" } else { "/nonexistent/spolia-test" })],
+            roots: vec![PathBuf::from(if cfg!(windows) { "Q:\\does\\not\\exist" } else { "/nonexistent/projectassests-test" })],
             ..Default::default()
         });
         assert!(matches!(
@@ -1672,7 +1672,7 @@ mod tests {
 
         assert_eq!(dom.name, "app");
         assert!(dom.health_score > 0, "健康度应被计算");
-        assert_ne!(dom.status, spolia_domain::ProjectStatus::Unknown, "状态应被推断");
+        assert_ne!(dom.status, projectassests_domain::ProjectStatus::Unknown, "状态应被推断");
         assert_eq!(dom.framework, "Axum");
         assert!(dom.updated_at.is_some(), "无 Git 时应用 mtime 兜底");
         assert!(dom.ai_profile.is_none(), "Level 0 不产出 AI 画像");

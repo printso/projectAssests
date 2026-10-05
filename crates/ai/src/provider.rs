@@ -12,7 +12,7 @@
 //! 而不是靠每个调用点自己记得检查（那必然会漏）。
 
 use serde::{Deserialize, Serialize};
-use spolia_domain::{AiError, JobType, LlmSettings, RouteTarget};
+use projectassests_domain::{AiError, JobType, LlmSettings, RouteTarget};
 
 /// LLM 对话消息角色。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -303,7 +303,7 @@ pub fn timeout_for(json_mode: bool) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{CloudProvider, LocalBackend};
+    use projectassests_domain::{CloudProvider, LocalBackend};
 
     fn local_settings() -> LlmSettings {
         LlmSettings {

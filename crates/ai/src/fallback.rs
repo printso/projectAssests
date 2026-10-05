@@ -14,11 +14,11 @@
 //! 3. **每条论断都要有出处**：citations 全部来自真实检索结果，可点击跳转。
 //!
 //! # 为什么是纯函数
-//! 输入是已经检索好的 `SearchHit` 列表（由上层用 `spolia-search` 取得），
+//! 输入是已经检索好的 `SearchHit` 列表（由上层用 `projectassests-search` 取得），
 //! 本模块不碰数据库、不发网络。这样可以穷举单测各种边界
 //! （空结果、只有项目、混合类型、超长列表），而 AI crate 也不必依赖 storage。
 
-use spolia_domain::{
+use projectassests_domain::{
     AnalystAnswer, AnswerSource, Citation, CitationKind, HitKind, SearchHit,
 };
 
@@ -264,7 +264,7 @@ fn build_citations(hits: &[SearchHit]) -> Vec<Citation> {
 /// 检索命中类型 → 引用类型。
 ///
 /// 🔴 **不再在本 crate 维护映射**：唯一真相源是 `HitKind::citation_kind()`（domain）。
-/// 早先这里与 `spolia-service` 各抄了一份 `_ => File` 的 match，
+/// 早先这里与 `projectassests-service` 各抄了一份 `_ => File` 的 match，
 /// domain 加 `Insight`/`Opportunity` 后两处都把结论性实体静默吞成「文件」引用。
 /// 现在只是一个转发壳，保留本地调用点与测试的写法不变。
 fn citation_kind(kind: HitKind) -> CitationKind {
@@ -308,7 +308,7 @@ fn browse_suggestions() -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{HitLink, MatchSource};
+    use projectassests_domain::{HitLink, MatchSource};
 
     fn hit(kind: HitKind, id: &str, title: &str) -> SearchHit {
         SearchHit {

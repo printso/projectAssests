@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn missing_and_file_paths_are_rejected() {
-        let err = list_dir("C:/definitely-not-here-spolia", false).unwrap_err();
+        let err = list_dir("C:/definitely-not-here-projectassests", false).unwrap_err();
         assert!(matches!(err, ServiceError::Invalid(_)));
         assert!(err.to_string().contains("不存在"));
 

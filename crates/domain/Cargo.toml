@@ -1,6 +1,6 @@
 [package]
-name = "spolia-domain"
-description = "Spolia 领域模型：八类资产、能力三层结构、关系、洞察、机会、任务。纯类型定义，无 IO 依赖。"
+name = "projectassests-domain"
+description = "projectAssests 领域模型：八类资产、能力三层结构、关系、洞察、机会、任务。纯类型定义，无 IO 依赖。"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,5 +16,5 @@ thiserror = { workspace = true }
 chrono = { workspace = true }
 
 [lib]
-name = "spolia_domain"
+name = "projectassests_domain"
 path = "src/lib.rs"

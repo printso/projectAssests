@@ -1,7 +1,7 @@
 //! 检索引擎：编排召回 → 过滤 → 评分 → 排序 → 分页。
 //!
 //! # 依赖方向
-//! 本 crate 依赖 `spolia-storage` 取数据，但**只通过 `RetrievalRepo` 与各 Repository**：
+//! 本 crate 依赖 `projectassests-storage` 取数据，但**只通过 `RetrievalRepo` 与各 Repository**：
 //! 引擎自身不出现任何 SQL。换检索后端（例如接向量库）时，
 //! 改动限于 storage 的 `fts.rs`，本文件与上层 API 都不受影响。
 //!
@@ -19,11 +19,11 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use spolia_domain::{
+use projectassests_domain::{
     Asset, Capability, HitKind, HitLink, Insight, MatchSource, Opportunity, Project, ReuseTier,
-    SearchHit, SearchQuery, SearchResult, SearchScope, SortBy, SpoliaError, UserFeedback,
+    SearchHit, SearchQuery, SearchResult, SearchScope, SortBy, ProjectAssestsError, UserFeedback,
 };
-use spolia_storage::{
+use projectassests_storage::{
     needs_substring_fallback, AssetFilter, AssetSort, Candidate, Database, InsightFilter,
     OpportunityFilter, ProjectFilter, ProjectSort, RetrievalRepo,
 };
@@ -96,7 +96,7 @@ impl SearchEngine {
         db: &Database,
         query: &SearchQuery,
         now: chrono::DateTime<chrono::Utc>,
-    ) -> Result<SearchResult, SpoliaError> {
+    ) -> Result<SearchResult, ProjectAssestsError> {
         let started = Instant::now();
         let q = query.normalized_q();
         let limit = query.effective_limit() as usize;
@@ -146,7 +146,7 @@ impl SearchEngine {
         q: &str,
         terms: &[String],
         now: chrono::DateTime<chrono::Utc>,
-    ) -> Result<Vec<Scored>, SpoliaError> {
+    ) -> Result<Vec<Scored>, ProjectAssestsError> {
         let mut out: Vec<Scored> = Vec::new();
         let retrieval = db.retrieval();
 
@@ -227,7 +227,7 @@ impl SearchEngine {
                 // 洞察有真实时间线：created_at 是"这条结论何时得出"，
                 // 语义上正是它的时效（与资产的 created_at=抽取时间不同）。
                 let recency =
-                    recency_score(spolia_domain::days_since(Some(&i.created_at), now));
+                    recency_score(projectassests_domain::days_since(Some(&i.created_at), now));
                 let input = RankInput {
                     relevance: cand_score(&cand),
                     quality: insight_quality(&i),
@@ -243,7 +243,7 @@ impl SearchEngine {
             for o in opps {
                 let cand = find_cand(&cands, &o.id);
                 let recency =
-                    recency_score(spolia_domain::days_since(Some(&o.created_at), now));
+                    recency_score(projectassests_domain::days_since(Some(&o.created_at), now));
                 let input = RankInput {
                     relevance: cand_score(&cand),
                     quality: opportunity_quality(&o),
@@ -264,7 +264,7 @@ impl SearchEngine {
         query: &SearchQuery,
         terms: &[String],
         now: chrono::DateTime<chrono::Utc>,
-    ) -> Result<Vec<Scored>, SpoliaError> {
+    ) -> Result<Vec<Scored>, ProjectAssestsError> {
         let mut out: Vec<Scored> = Vec::new();
         // 🔴 候选池大小必须**固定**，不能是 `limit + offset`。
         // 若随 offset 增长，`total` 就会逐页变大（第 1 页报 3 条、第 2 页报 6 条），
@@ -352,7 +352,7 @@ impl SearchEngine {
                 ..Default::default()
             };
             for i in db.insights().list(&insight_filter)? {
-                let recency = recency_score(spolia_domain::days_since(Some(&i.created_at), now));
+                let recency = recency_score(projectassests_domain::days_since(Some(&i.created_at), now));
                 let input = RankInput {
                     relevance: 0.0, // 浏览模式无关键词命中
                     quality: insight_quality(&i),
@@ -367,7 +367,7 @@ impl SearchEngine {
             let mut opp_filter = OpportunityFilter::actionable();
             opp_filter.limit = Some(want as u32);
             for o in db.opportunities().list(&opp_filter)? {
-                let recency = recency_score(spolia_domain::days_since(Some(&o.created_at), now));
+                let recency = recency_score(projectassests_domain::days_since(Some(&o.created_at), now));
                 let input = RankInput {
                     relevance: 0.0,
                     quality: opportunity_quality(&o),
@@ -428,7 +428,7 @@ fn project_briefs(
     retrieval: &RetrievalRepo<'_>,
     assets: &[Asset],
     now: chrono::DateTime<chrono::Utc>,
-) -> Result<HashMap<String, ProjectBrief>, SpoliaError> {
+) -> Result<HashMap<String, ProjectBrief>, ProjectAssestsError> {
     let mut ids: Vec<String> = Vec::new();
     for a in assets {
         if !ids.contains(&a.project_id) {
@@ -804,14 +804,14 @@ fn state_label_zh(fb: Option<UserFeedback>) -> &'static str {
     }
 }
 
-// StorageError → SpoliaError 的转换由 domain 层的
-// `SpoliaError::Storage(#[from] StorageError)` 提供，本 crate 直接用 `?` 即可。
+// StorageError → ProjectAssestsError 的转换由 domain 层的
+// `ProjectAssestsError::Storage(#[from] StorageError)` 提供，本 crate 直接用 `?` 即可。
 // （不得在此再 impl From：两个类型都属外部 crate，违反孤儿规则且与 domain 冲突。）
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{AssetType, CapabilityLayer, CodeStats, Evidence, ProjectStatus, SearchFilter};
+    use projectassests_domain::{AssetType, CapabilityLayer, CodeStats, Evidence, ProjectStatus, SearchFilter};
 
     fn db() -> Database {
         Database::in_memory().unwrap()
@@ -852,7 +852,7 @@ mod tests {
                 modules: 4,
                 languages: vec![],
             },
-            scan: spolia_domain::ScanFacts::default(),
+            scan: projectassests_domain::ScanFacts::default(),
             ai_profile: None,
         }
     }

@@ -826,6 +826,189 @@ dependencies = [
 ]
 
 [[package]]
+name = "projectassests-ai"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "projectassests-domain",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "projectassests-asset"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "globset",
+ "projectassests-domain",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "projectassests-domain"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "projectassests-insight"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "projectassests-asset",
+ "projectassests-domain",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "projectassests-jobs"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "projectassests-asset",
+ "projectassests-domain",
+ "projectassests-insight",
+ "projectassests-scanner",
+ "projectassests-storage",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "projectassests-mcp"
+version = "0.1.0"
+dependencies = [
+ "projectassests-domain",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "projectassests-scanner"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "globset",
+ "ignore",
+ "projectassests-domain",
+ "rayon",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "walkdir",
+]
+
+[[package]]
+name = "projectassests-search"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "projectassests-domain",
+ "projectassests-storage",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "projectassests-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "projectassests-ai",
+ "projectassests-asset",
+ "projectassests-domain",
+ "projectassests-insight",
+ "projectassests-jobs",
+ "projectassests-mcp",
+ "projectassests-scanner",
+ "projectassests-search",
+ "projectassests-service",
+ "projectassests-storage",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "projectassests-service"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "projectassests-ai",
+ "projectassests-asset",
+ "projectassests-domain",
+ "projectassests-insight",
+ "projectassests-jobs",
+ "projectassests-scanner",
+ "projectassests-search",
+ "projectassests-storage",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "projectassests-storage"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "projectassests-domain",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "quinn"
 version = "0.11.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1222,189 +1405,6 @@ checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "spolia-ai"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
- "spolia-domain",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "spolia-asset"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "globset",
- "serde",
- "serde_json",
- "spolia-domain",
- "tempfile",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "spolia-domain"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "spolia-insight"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "spolia-asset",
- "spolia-domain",
- "tempfile",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "spolia-jobs"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "serde",
- "serde_json",
- "spolia-asset",
- "spolia-domain",
- "spolia-insight",
- "spolia-scanner",
- "spolia-storage",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "spolia-mcp"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "spolia-domain",
- "tempfile",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "spolia-scanner"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "globset",
- "ignore",
- "rayon",
- "serde",
- "serde_json",
- "spolia-domain",
- "tempfile",
- "thiserror",
- "tracing",
- "walkdir",
-]
-
-[[package]]
-name = "spolia-search"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "spolia-domain",
- "spolia-storage",
- "tempfile",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "spolia-server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "chrono",
- "serde",
- "serde_json",
- "spolia-ai",
- "spolia-asset",
- "spolia-domain",
- "spolia-insight",
- "spolia-jobs",
- "spolia-mcp",
- "spolia-scanner",
- "spolia-search",
- "spolia-service",
- "spolia-storage",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-stream",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "spolia-service"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "spolia-ai",
- "spolia-asset",
- "spolia-domain",
- "spolia-insight",
- "spolia-jobs",
- "spolia-scanner",
- "spolia-search",
- "spolia-storage",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "spolia-storage"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "rusqlite",
- "serde",
- "serde_json",
- "spolia-domain",
- "tempfile",
- "thiserror",
- "tracing",
- "uuid",
 ]
 
 [[package]]

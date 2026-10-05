@@ -26,7 +26,7 @@
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
-use spolia_domain::{
+use projectassests_domain::{
     colors, Capability, CapabilityLayer, EntityKind, Project, Relation, RelationType,
 };
 
@@ -988,7 +988,7 @@ fn non_empty(s: &Option<String>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{CodeStats, ProjectStatus, ScanFacts};
+    use projectassests_domain::{CodeStats, ProjectStatus, ScanFacts};
 
     fn ctx() -> ServiceContext {
         ServiceContext::in_memory().unwrap()

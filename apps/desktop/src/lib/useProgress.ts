@@ -68,7 +68,7 @@ export function useProgress(onReconnect?: () => void): ProgressState {
       } catch {
         // 🔴 单帧解析失败不该断开整个流：
         // 记警告并继续，否则一帧脏数据会让进度条永久停摆。
-        console.warn("[spolia] 进度帧解析失败，已跳过:", e.data);
+        console.warn("[projectassests] 进度帧解析失败，已跳过:", e.data);
         return;
       }
       setState((prev) => ({ ...prev, event: parsed }));

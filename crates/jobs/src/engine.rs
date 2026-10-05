@@ -18,8 +18,8 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use spolia_domain::{Job, JobError, JobStatus, JobType, SpoliaError};
-use spolia_storage::{ActivityIcon, Database};
+use projectassests_domain::{Job, JobError, JobStatus, JobType, ProjectAssestsError};
+use projectassests_storage::{ActivityIcon, Database};
 
 use crate::cancel::{CancelRegistry, CancelToken};
 use crate::progress::{ProgressBroadcaster, ProgressEvent};
@@ -102,7 +102,7 @@ impl JobContext {
     ///
     /// # 为什么需要它
     /// `JobContext` 持有 `payload` 且不可克隆（所有权语义要求任务体独占它）。
-    /// 但同步库（`spolia_scanner`）跑在 `spawn_blocking` 里，
+    /// 但同步库（`projectassests_scanner`）跑在 `spawn_blocking` 里，
     /// 内部还用 rayon 多线程并行——那些线程需要能上报进度，
     /// 而 `&JobContext` 活不过 `move` 进闭包的那一刻。
     ///
@@ -211,7 +211,7 @@ impl JobEngine {
     ///
     /// 🔴 必须在启动时调用。否则僵尸任务会让 `has_active_of_type` 永久为真，
     /// 用户再也无法触发扫描，且没有任何提示说明原因——这是最难排查的一类 bug。
-    pub fn reap_stale_jobs(&self) -> Result<usize, SpoliaError> {
+    pub fn reap_stale_jobs(&self) -> Result<usize, ProjectAssestsError> {
         let reaped = self.db.jobs().reap_stale()?;
         if reaped > 0 {
             tracing::warn!(count = reaped, "收割了上次运行遗留的未完成任务");
@@ -232,7 +232,7 @@ impl JobEngine {
         &self,
         job_type: JobType,
         payload: Option<serde_json::Value>,
-    ) -> Result<String, SpoliaError> {
+    ) -> Result<String, ProjectAssestsError> {
         self.spawn_job(job_type, payload)
     }
 
@@ -251,15 +251,15 @@ impl JobEngine {
         &self,
         job_type: JobType,
         payload: Option<serde_json::Value>,
-    ) -> Result<String, SpoliaError> {
+    ) -> Result<String, ProjectAssestsError> {
         if self.shutdown.load(Ordering::SeqCst) {
-            return Err(SpoliaError::Job(JobError::Execution(
+            return Err(ProjectAssestsError::Job(JobError::Execution(
                 "服务正在关闭，请稍后再试".into(),
             )));
         }
 
         let handler = self.handlers.get(&job_type).ok_or_else(|| {
-            SpoliaError::Job(JobError::Execution(format!(
+            ProjectAssestsError::Job(JobError::Execution(format!(
                 "未注册 {} 类型的任务处理器",
                 job_type.label_zh()
             )))
@@ -268,7 +268,7 @@ impl JobEngine {
         let handler = Arc::clone(handler);
 
         if self.db.jobs().has_active_of_type(job_type)? {
-            return Err(SpoliaError::Job(JobError::AlreadyRunning(
+            return Err(ProjectAssestsError::Job(JobError::AlreadyRunning(
                 job_type.label_zh().to_string(),
             )));
         }
@@ -324,15 +324,15 @@ impl JobEngine {
     /// 🔴 顺序必须是"先置取消标志，再写 DB"：反过来的话，
     /// 工作线程可能在标志置位前又上报一次进度，把 cancelled 覆盖掉。
     /// （DB 层有终态保护兜底，但这里把顺序摆对能少依赖一层兜底。）
-    pub fn cancel(&self, job_id: &str) -> Result<(), SpoliaError> {
+    pub fn cancel(&self, job_id: &str) -> Result<(), ProjectAssestsError> {
         let job = self
             .db
             .jobs()
             .get(job_id)?
-            .ok_or_else(|| SpoliaError::Job(JobError::NotFound(job_id.to_string())))?;
+            .ok_or_else(|| ProjectAssestsError::Job(JobError::NotFound(job_id.to_string())))?;
 
         if job.status.is_terminal() {
-            return Err(SpoliaError::Job(JobError::AlreadyFinished(
+            return Err(ProjectAssestsError::Job(JobError::AlreadyFinished(
                 job.status.label_zh().to_string(),
             )));
         }
@@ -383,17 +383,17 @@ impl JobEngine {
     }
 
     /// 最近任务列表（任务中心页）。
-    pub fn recent(&self, limit: u32) -> Result<Vec<Job>, SpoliaError> {
+    pub fn recent(&self, limit: u32) -> Result<Vec<Job>, ProjectAssestsError> {
         Ok(self.db.jobs().recent(limit)?)
     }
 
     /// 正在运行的任务（侧栏进度卡）。
-    pub fn running(&self) -> Result<Vec<Job>, SpoliaError> {
+    pub fn running(&self) -> Result<Vec<Job>, ProjectAssestsError> {
         Ok(self.db.jobs().running()?)
     }
 
     /// 全局进度（侧栏"索引中 x%"）。
-    pub fn overall_progress(&self) -> Result<Option<f64>, SpoliaError> {
+    pub fn overall_progress(&self) -> Result<Option<f64>, ProjectAssestsError> {
         Ok(self.db.jobs().overall_progress()?)
     }
 
@@ -993,7 +993,7 @@ mod tests {
         let db = test_db();
         let engine = engine_with(Arc::clone(&db), vec![]);
         let err = engine.submit(JobType::ScanProject, None).await.unwrap_err();
-        assert!(matches!(err, SpoliaError::Job(JobError::Execution(_))));
+        assert!(matches!(err, ProjectAssestsError::Job(JobError::Execution(_))));
         assert_eq!(db.jobs().count().unwrap(), 0, "被拒的提交不得留下脏记录");
     }
 
@@ -1389,7 +1389,7 @@ mod tests {
         );
         let err = engine.submit(JobType::ScanProject, None).await.unwrap_err();
         assert!(
-            matches!(err, SpoliaError::Job(JobError::AlreadyRunning(_))),
+            matches!(err, ProjectAssestsError::Job(JobError::AlreadyRunning(_))),
             "窗口期内第二次提交必须被拒，实际 {err:?}"
         );
 
@@ -1433,7 +1433,7 @@ mod tests {
         // 第一个任务还在跑，第二次提交应被拒
         let err = engine.submit(JobType::ScanProject, None).await.unwrap_err();
         assert!(
-            matches!(err, SpoliaError::Job(JobError::AlreadyRunning(_))),
+            matches!(err, ProjectAssestsError::Job(JobError::AlreadyRunning(_))),
             "应报 AlreadyRunning，实际 {err:?}"
         );
         engine.cancel(&first).unwrap();
@@ -1513,7 +1513,7 @@ mod tests {
         let db = test_db();
         let engine = engine_with(Arc::clone(&db), vec![]);
         let err = engine.cancel("ghost").unwrap_err();
-        assert!(matches!(err, SpoliaError::Job(JobError::NotFound(_))));
+        assert!(matches!(err, ProjectAssestsError::Job(JobError::NotFound(_))));
     }
 
     #[tokio::test]
@@ -1530,7 +1530,7 @@ mod tests {
         wait_for_terminal(&db, &id).await;
         let err = engine.cancel(&id).unwrap_err();
         assert!(
-            matches!(err, SpoliaError::Job(JobError::AlreadyFinished(_))),
+            matches!(err, ProjectAssestsError::Job(JobError::AlreadyFinished(_))),
             "已完成的任务不得再取消，实际 {err:?}"
         );
     }
@@ -1657,7 +1657,7 @@ mod tests {
         engine.shutdown();
         let err = engine.submit(JobType::ScanProject, None).await.unwrap_err();
         assert!(
-            matches!(err, SpoliaError::Job(JobError::Execution(_))),
+            matches!(err, ProjectAssestsError::Job(JobError::Execution(_))),
             "关闭后应拒绝新任务，实际 {err:?}"
         );
     }

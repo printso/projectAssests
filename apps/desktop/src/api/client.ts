@@ -1,5 +1,5 @@
 /**
- * API 客户端：Spolia 前端与本地 Rust 服务之间的**唯一**数据通道。
+ * API 客户端：projectAssests 前端与本地 Rust 服务之间的**唯一**数据通道。
  *
  * # 🔴 为什么所有请求都必须经过这里
  * 1. **信封解包只写一次**。后端成功返回 `{success, data}`、失败返回
@@ -132,7 +132,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
       throw err; // 主动取消，原样上抛让调用方静默处理
     }
     throw new NetworkError(
-      "无法连接到 Spolia 本地服务。请确认服务已启动（默认 127.0.0.1:8787）。",
+      "无法连接到 projectAssests 本地服务。请确认服务已启动（默认 127.0.0.1:8787）。",
       err,
     );
   }

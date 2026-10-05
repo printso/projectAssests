@@ -1002,11 +1002,67 @@ function DataSection({
 
 
 /**
+ * 单条审计记录。
+ *
+ * # 🔴 `ok` 是三态，不是布尔
+ * - `true`  → 成功的模型调用（绿对勾）
+ * - `false` → **失败**的模型调用（红叉 + 展开原因）
+ * - `null`  → 本地安全事件，不是一次调用（**不渲染任何成败标记**）
+ *
+ * 第三态是设计的关键：若把 `null` 当成 `true`，UI 就会在
+ * 「用户关闭了敏感项目仅本地约束」旁边显示一个绿色对勾，
+ * 把一次**安全降级**说成"操作成功"。那不是审计，是误导。
+ *
+ * # 为什么失败必须显眼
+ * 失败调用同样把 prompt 发出去了——网关是**收到之后**才拒的。
+ * 这条记录是"那次数据确实出过网"的唯一凭证，不能被混在一堆成功记录里。
+ */
+function AuditRow({ a }: { a: AuditView }) {
+  // 安全事件没有 model/route，用 db 图标表示"本机"，不显示路由标签
+  const isLlmCall = a.ok !== null;
+  const failed = a.ok === false;
+
+  return (
+    <div className="citation-item">
+      <span
+        className="kind"
+        style={failed ? { color: "var(--color-danger)" } : undefined}
+      >
+        {/* 🔴 成败图标只在模型调用时出现；安全事件保持中性 */}
+        <Icon name={failed ? "x" : a.route.includes("local") ? "db" : "cloud"} />
+      </span>
+      <div className="label">
+        <span style={failed ? { color: "var(--color-danger)" } : undefined}>
+          {a.summary}
+        </span>
+        <div className="supports">
+          {a.at}
+          {isLlmCall ? ` · ${a.model} · ${a.route_label}` : ""} · {a.job_type}
+        </div>
+        {failed && a.error ? (
+          <div
+            className="supports mono"
+            style={{ color: "var(--color-danger)", marginTop: 4 }}
+            title="请求已被发出，网关返回了错误"
+          >
+            {/* 错误原因来自 provider，已截断到 180 字符，不含代码原文与 API Key */}
+            失败原因：{a.error}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
  * 审计日志与配置导出。
  *
  * # 🔴 审计日志是 Local-First 的可信凭证
- * 每次调用模型都留痕（时间/模型/路由/任务/摘要）。用户问"我的代码有没有被发到云端"时，
- * 这份日志就是唯一能自证的答案——没有它，"只用本地模型"只是一句承诺，无法核验。
+ * 每次调用模型都留痕（时间/模型/路由/任务/摘要），**失败也留痕**：
+ * 请求被网关拒绝（400 未开通/超时/限流）时 prompt 已经出网了，
+ * 只记成功会让"我的代码有没有被发到云端"这个问题得到假答案。
+ * 用户问起时，这份日志就是唯一能自证的凭证——
+ * 没有它，"只用本地模型"只是一句承诺，无法核验。
  *
  * # 🔴 导出是有序键值对，不是对象
  * 后端刻意返回 `Vec<(String,String)>` 保持顺序。这里按数组顺序渲染，
@@ -1029,10 +1085,10 @@ function AuditAndExport() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "spolia-settings.txt";
+      a.download = "projectassests-settings.txt";
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(`已导出 ${entries.length} 项配置`, "文件：spolia-settings.txt（不含 API Key 明文）");
+      toast.success(`已导出 ${entries.length} 项配置`, "文件：projectassests-settings.txt（不含 API Key 明文）");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "导出失败");
     }
@@ -1057,21 +1113,12 @@ function AuditAndExport() {
             <InlineEmpty>
               还没有模型调用记录。每次调用大模型（画像、分析师）都会在这里留痕：
               时间、模型、路由（本地/云端）、任务类型。
+              失败的调用同样会记录——请求被拒绝时数据已经发出，这里是你唯一的凭证。
             </InlineEmpty>
           ) : (
             <div className="citation-list">
               {audit.map((a, i) => (
-                <div className="citation-item" key={i}>
-                  <span className="kind">
-                    <Icon name={a.route.includes("local") ? "db" : "cloud"} />
-                  </span>
-                  <div className="label">
-                    {a.summary}
-                    <div className="supports">
-                      {a.at} · {a.model} · {a.route_label} · {a.job_type}
-                    </div>
-                  </div>
-                </div>
+                <AuditRow key={i} a={a} />
               ))}
             </div>
           )}

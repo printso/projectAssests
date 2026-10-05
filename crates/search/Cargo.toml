@@ -1,6 +1,6 @@
 [package]
-name = "spolia-search"
-description = "Spolia 混合检索：FTS5 关键词召回 + 结构化过滤 + 重排 + 排序理由。"
+name = "projectassests-search"
+description = "projectAssests 混合检索：FTS5 关键词召回 + 结构化过滤 + 重排 + 排序理由。"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,8 +8,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-spolia-domain = { workspace = true }
-spolia-storage = { workspace = true }
+projectassests-domain = { workspace = true }
+projectassests-storage = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -21,5 +21,5 @@ chrono = { workspace = true }
 tempfile = { workspace = true }
 
 [lib]
-name = "spolia_search"
+name = "projectassests_search"
 path = "src/lib.rs"

@@ -15,8 +15,8 @@
 use serde::{Deserialize, Serialize};
 // `Archaeology` / `RelationType` 只在测试里具名出现（主代码靠类型推断），
 // 故不放进这份 use 列表，避免未使用导入警告
-use spolia_domain::{LanguageShare, Project, ProjectAiProfile, ProjectHighlight, ProjectStatus, Relation};
-use spolia_storage::{ProjectFilter, ProjectSort};
+use projectassests_domain::{LanguageShare, Project, ProjectAiProfile, ProjectHighlight, ProjectStatus, Relation};
+use projectassests_storage::{ProjectFilter, ProjectSort};
 
 use crate::context::{ServiceContext, ServiceError};
 
@@ -244,7 +244,7 @@ fn list_item(p: &Project, now: chrono::DateTime<chrono::Utc>) -> ProjectListItem
         sensitive: p.sensitive,
         days_idle,
         updated_display: days_idle
-            .map(|d| spolia_storage::relative_time(&days_ago_iso(d, now), now))
+            .map(|d| projectassests_storage::relative_time(&days_ago_iso(d, now), now))
             .unwrap_or_else(|| "时间未知".to_string()),
         has_git: p.scan.has_git,
         git_commits: p.scan.git_commits,
@@ -550,7 +550,7 @@ pub fn format_loc(loc: usize) -> String {
 
 /// 语言 → 色值（官方色板，与图谱同源）。
 fn language_color(language: &str) -> &'static str {
-    use spolia_domain::colors;
+    use projectassests_domain::colors;
     // 先按语言名找专用色，找不到就按"代码"类回落
     match language.to_ascii_lowercase().as_str() {
         "python" => "#3572A5",
@@ -618,7 +618,7 @@ fn archaeology_view(
         first_commit_at: p.created_at.clone(),
         last_commit_at: p.last_commit_at.clone(),
         days_idle: p.days_since_update(now),
-        branch: spolia_scanner::read_branch_from_head(root),
+        branch: projectassests_scanner::read_branch_from_head(root),
     })
 }
 
@@ -654,12 +654,12 @@ fn top_salvage_names(ctx: &ServiceContext, project_id: &str) -> Vec<String> {
     ctx.db
         .assets()
         .list(
-            &spolia_storage::AssetFilter {
+            &projectassests_storage::AssetFilter {
                 project_id: Some(project_id.to_string()),
                 limit: Some(3),
                 ..Default::default()
             },
-            spolia_storage::AssetSort::ReuseScore,
+            projectassests_storage::AssetSort::ReuseScore,
         )
         .map(|list| list.into_iter().map(|a| a.name).collect())
         .unwrap_or_default()
@@ -789,21 +789,21 @@ fn project_assets(ctx: &ServiceContext, project_id: &str) -> Result<Vec<AssetBri
         .db
         .assets()
         .list(
-            &spolia_storage::AssetFilter {
+            &projectassests_storage::AssetFilter {
                 project_id: Some(project_id.to_string()),
                 // 无证据的资产不展示（产品红线）
                 evidence_required: true,
                 limit: Some(DETAIL_ASSETS_LIMIT as u32),
                 ..Default::default()
             },
-            spolia_storage::AssetSort::ReuseScore,
+            projectassests_storage::AssetSort::ReuseScore,
         )?
         .into_iter()
         .map(|a| {
             // 🔴 用 ReuseTier::from_score 而非 a.tier()：
             // tier() 是 DuplicateGroup 的方法（基于组内平均分），Asset 上没有。
             // 分档阈值集中在 domain 的 from_score 里，避免各处散落判断。
-            let tier = spolia_domain::ReuseTier::from_score(a.reuse_score);
+            let tier = projectassests_domain::ReuseTier::from_score(a.reuse_score);
             AssetBrief {
                 id: a.id,
                 name: a.name,
@@ -820,7 +820,7 @@ fn project_assets(ctx: &ServiceContext, project_id: &str) -> Result<Vec<AssetBri
 
 /// 与该项目相关的洞察。
 fn project_insights(ctx: &ServiceContext, project_id: &str) -> Result<Vec<InsightBrief>, ServiceError> {
-    let all = ctx.db.insights().list(&spolia_storage::InsightFilter {
+    let all = ctx.db.insights().list(&projectassests_storage::InsightFilter {
         limit: Some(200),
         ..Default::default()
     })?;
@@ -883,8 +883,8 @@ pub fn set_sensitive(
         // 🔴 用 `event()` 而非 `llm_ok()`：这不是一次模型调用，没有成败概念。
         // `ok = None` ⇒ 前端不渲染成败标记。若误用 `llm_ok` 填 `Some(true)`，
         // UI 会在「取消敏感标记」旁显示绿色对勾——把一次安全降级渲染成"操作成功"。
-        let _ = ctx.db.settings().audit(&spolia_domain::AuditEntry::event(
-            spolia_storage::now_utc(),
+        let _ = ctx.db.settings().audit(&projectassests_domain::AuditEntry::event(
+            projectassests_storage::now_utc(),
             "SETTINGS",
             format!("取消项目「{}」的敏感标记", before.name),
             Some(project_id.to_string()),
@@ -951,7 +951,7 @@ pub fn remove(ctx: &ServiceContext, project_id: &str) -> Result<(), ServiceError
     }
 
     let _ = ctx.db.activities().push(
-        spolia_storage::ActivityIcon::Alert,
+        projectassests_storage::ActivityIcon::Alert,
         "已移除项目记录",
         format!("{}（磁盘文件未删除）", exists.name),
     );
@@ -971,14 +971,14 @@ pub async fn reindex(ctx: &ServiceContext, project_id: &str) -> Result<String, S
     let payload = serde_json::json!({ "project_id": p.id });
     Ok(ctx
         .jobs
-        .submit(spolia_domain::JobType::IndexCode, Some(payload))
+        .submit(projectassests_domain::JobType::IndexCode, Some(payload))
         .await?)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{
+    use projectassests_domain::{
         Archaeology, Asset, AssetType, Capability, CapabilityLayer, CodeStats, Evidence, Insight,
         InsightType, Relation, RelationType, ScanFacts,
     };
@@ -1080,7 +1080,7 @@ mod tests {
     /// 这个助手完整模拟流水线的三阶段写入，避免每个测试都踩同一个坑。
     fn seed_project(c: &ServiceContext, p: &Project) {
         let scan = p.scan.clone();
-        let symbols = spolia_domain::SymbolStats {
+        let symbols = projectassests_domain::SymbolStats {
             symbol_count: p.stats.symbols,
             module_count: p.stats.modules,
         };
@@ -1558,10 +1558,10 @@ mod tests {
             .upsert(&Relation::new(
                 "r1",
                 "p1",
-                spolia_domain::EntityKind::Project,
+                projectassests_domain::EntityKind::Project,
                 RelationType::Implements,
                 "cap-video",
-                spolia_domain::EntityKind::Capability,
+                projectassests_domain::EntityKind::Capability,
                 0.88,
             )
             .with_evidence(["pytorch".to_string(), "ffmpeg".to_string()]))
@@ -1592,10 +1592,10 @@ mod tests {
                     &Relation::new(
                         id,
                         "p1",
-                        spolia_domain::EntityKind::Project,
+                        projectassests_domain::EntityKind::Project,
                         RelationType::Implements,
                         target,
-                        spolia_domain::EntityKind::Capability,
+                        projectassests_domain::EntityKind::Capability,
                         conf,
                     ),
                 )
@@ -1618,10 +1618,10 @@ mod tests {
             .upsert(&Relation::new(
                 "r1",
                 "p1",
-                spolia_domain::EntityKind::Project,
+                projectassests_domain::EntityKind::Project,
                 RelationType::SimilarTo,
                 "p2",
-                spolia_domain::EntityKind::Project,
+                projectassests_domain::EntityKind::Project,
                 0.73,
             )
             .with_evidence(["共同能力: 视频生成".to_string()]))
@@ -1649,10 +1649,10 @@ mod tests {
             .upsert(&Relation::new(
                 "r1",
                 "p1",
-                spolia_domain::EntityKind::Project,
+                projectassests_domain::EntityKind::Project,
                 RelationType::SimilarTo,
                 "p2",
-                spolia_domain::EntityKind::Project,
+                projectassests_domain::EntityKind::Project,
                 0.2,
             )
             .with_evidence([]))
@@ -1701,8 +1701,8 @@ mod tests {
                 title: "VideoPipeline 可复用".into(),
                 description: "在 2 个项目中重复出现".into(),
                 confidence: 0.9,
-                evidence: vec![spolia_domain::EvidenceItem {
-                    kind: spolia_domain::EvidenceKind::File,
+                evidence: vec![projectassests_domain::EvidenceItem {
+                    kind: projectassests_domain::EvidenceKind::File,
                     label: "src/a1.py".into(),
                     target: Some("p1:src/a1.py".into()),
                 }],
@@ -1883,7 +1883,7 @@ mod tests {
         let job_id = reindex(&c, "p1").await.unwrap();
         assert!(job_id.starts_with("index_code-"), "实际 {job_id}");
         let job = c.db.jobs().get(&job_id).unwrap().unwrap();
-        assert_eq!(job.job_type, spolia_domain::JobType::IndexCode);
+        assert_eq!(job.job_type, projectassests_domain::JobType::IndexCode);
         // 载荷必须带上项目 id，否则任务不知道索引哪个项目
         assert_eq!(
             job.payload.as_ref().and_then(|p| p.get("project_id")).and_then(|v| v.as_str()),

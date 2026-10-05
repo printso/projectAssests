@@ -1,6 +1,6 @@
 [package]
-name = "spolia-ai"
-description = "Spolia AI 层：LlmProvider trait、OpenAI-compatible/Ollama 实现、连接测试、确定性回退。"
+name = "projectassests-ai"
+description = "projectAssests AI 层：LlmProvider trait、OpenAI-compatible/Ollama 实现、连接测试、确定性回退。"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-spolia-domain = { workspace = true }
+projectassests-domain = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -22,5 +22,5 @@ async-trait = { workspace = true }
 tempfile = { workspace = true }
 
 [lib]
-name = "spolia_ai"
+name = "projectassests_ai"
 path = "src/lib.rs"

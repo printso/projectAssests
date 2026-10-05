@@ -21,8 +21,8 @@
 //! 用户会以为"这个项目是做视频生成的"，而实际可能完全不是。
 
 use serde::{Deserialize, Serialize};
-use spolia_ai::{ChatMessage, CompletionRequest, ResolvedModel};
-use spolia_domain::{Archaeology, AuditEntry, JobType, ProjectAiProfile, ProjectHighlight};
+use projectassests_ai::{ChatMessage, CompletionRequest, ResolvedModel};
+use projectassests_domain::{Archaeology, AuditEntry, JobType, ProjectAiProfile, ProjectHighlight};
 
 use crate::context::{ServiceContext, ServiceError};
 
@@ -256,7 +256,7 @@ pub async fn generate(ctx: &ServiceContext, req: &ProfileRequest) -> Result<Prof
     // 用 `AiError::Disabled` 而非 `NotConfigured`：模型是配好的，只是被主动关闭，
     // 两者的 hint 完全不同（一个让用户填 Key，一个让用户打开开关）。
     if !settings_of(ctx)?.scan.level2_enabled {
-        return Err(ServiceError::Ai(spolia_domain::AiError::Disabled));
+        return Err(ServiceError::Ai(projectassests_domain::AiError::Disabled));
     }
 
     // 敏感项目必须走本地：这里再挡一道（router 也会挡，双保险）
@@ -284,7 +284,7 @@ pub async fn generate(ctx: &ServiceContext, req: &ProfileRequest) -> Result<Prof
         .router
         // provider_for 收 `&LlmSettings`（它只关心模型配置，不需要整个 Settings）
         .provider_for(&settings_of(ctx)?.llm, JobType::AnalyzeProject, project.sensitive)
-        .ok_or(spolia_domain::AiError::NotConfigured)?;
+        .ok_or(projectassests_domain::AiError::NotConfigured)?;
 
     // 🔴 审计点必须紧跟 `complete()`，而不是放在函数末尾。
     //
@@ -343,20 +343,20 @@ fn resolve_model(ctx: &ServiceContext, sensitive: bool) -> Result<ResolvedModel,
         .map_err(ServiceError::from)
 }
 
-fn settings_of(ctx: &ServiceContext) -> Result<spolia_domain::Settings, ServiceError> {
+fn settings_of(ctx: &ServiceContext) -> Result<projectassests_domain::Settings, ServiceError> {
     Ok(ctx.db.settings().get_or_default()?)
 }
 
 /// 采集项目真实事实。
 fn collect_facts(
     ctx: &ServiceContext,
-    project: &spolia_domain::Project,
+    project: &projectassests_domain::Project,
 ) -> Result<ProjectFacts, ServiceError> {
     let now = ctx.now();
     let root = std::path::Path::new(&project.path);
 
     // 源文件清单：既喂给模型做参考，也用于校验它引用的路径是否真实
-    let (files, _stats) = spolia_jobs::list_source_files(root);
+    let (files, _stats) = projectassests_jobs::list_source_files(root);
     let source_files: Vec<String> = files
         .iter()
         .take(MAX_SOURCE_FILES)
@@ -415,11 +415,11 @@ fn collect_facts(
             first_commit_at: project.created_at.clone(),
             last_commit_at: project.last_commit_at.clone(),
             days_idle: project.days_since_update(now),
-            branch: spolia_scanner::read_branch_from_head(root),
-            recent_subjects: spolia_scanner::GitAnalyzer::new()
+            branch: projectassests_scanner::read_branch_from_head(root),
+            recent_subjects: projectassests_scanner::GitAnalyzer::new()
                 .recent_commit_subjects(root, MAX_COMMIT_SUBJECTS),
         },
-        top_dirs: spolia_jobs::top_dirs_of(root),
+        top_dirs: projectassests_jobs::top_dirs_of(root),
         top_assets,
         capabilities,
         source_files,
@@ -558,7 +558,7 @@ fn parse_llm_json(text: &str) -> Result<RawProfile, ServiceError> {
         }
     }
 
-    Err(ServiceError::Ai(spolia_domain::AiError::MalformedResponse(
+    Err(ServiceError::Ai(projectassests_domain::AiError::MalformedResponse(
         truncate(&format!("模型输出无法解析为画像 JSON: {}", cleaned), 200),
     )))
 }
@@ -678,7 +678,7 @@ fn verify_and_build(
         highlights,
         archaeology,
         generated_by: resolved.audit_label(),
-        generated_at: spolia_storage::now_utc(),
+        generated_at: projectassests_storage::now_utc(),
     };
 
     let _ = ctx; // 校验只用 facts，ctx 预留给将来查库补充证据
@@ -741,9 +741,9 @@ fn fallback_narrative(facts: &ProjectFacts) -> String {
 fn audit(
     ctx: &ServiceContext,
     resolved: &ResolvedModel,
-    project: &spolia_domain::Project,
+    project: &projectassests_domain::Project,
     facts: &ProjectFacts,
-    outcome: Result<(), &spolia_domain::AiError>,
+    outcome: Result<(), &projectassests_domain::AiError>,
 ) {
     let base = format!(
         "生成项目画像：{} 个文件 / {} 行 / {} 个资产引用",
@@ -751,7 +751,7 @@ fn audit(
         facts.stats.loc,
         facts.top_assets.len()
     );
-    let at = spolia_storage::now_utc();
+    let at = projectassests_storage::now_utc();
     let job = JobType::AnalyzeProject.as_str().to_string();
     let project_id = Some(project.id.clone());
 
@@ -784,7 +784,7 @@ mod tests {
     use super::*;
     // RouteTarget 仅测试构造 ResolvedModel 时用到（主代码经 resolved.route 透传），
     // 故在测试模块导入而非污染主代码的 use 列表
-    use spolia_domain::RouteTarget;
+    use projectassests_domain::RouteTarget;
 
     fn facts() -> ProjectFacts {
         ProjectFacts {
@@ -942,7 +942,7 @@ mod tests {
     #[test]
     fn rejects_non_json_output() {
         let err = parse_llm_json("我无法分析这个项目").unwrap_err();
-        assert!(matches!(err, ServiceError::Ai(spolia_domain::AiError::MalformedResponse(_))));
+        assert!(matches!(err, ServiceError::Ai(projectassests_domain::AiError::MalformedResponse(_))));
         // 错误信息要带上模型实际说了什么，便于排查
         assert!(err.to_string().contains("无法解析"));
     }
@@ -981,6 +981,100 @@ mod tests {
 
     fn ctx() -> ServiceContext {
         ServiceContext::in_memory().unwrap()
+    }
+
+    fn proj() -> projectassests_domain::Project {
+        projectassests_domain::Project {
+            id: "p1".into(),
+            name: "video-pipeline".into(),
+            path: "/tmp/video-pipeline".into(),
+            description: String::new(),
+            language: "Python".into(),
+            framework: "-".into(),
+            created_at: None,
+            updated_at: None,
+            last_commit_at: None,
+            status: projectassests_domain::ProjectStatus::Active,
+            health_score: 70,
+            completeness: None,
+            tags: vec![],
+            sensitive: false,
+            stats: projectassests_domain::CodeStats::default(),
+            scan: projectassests_domain::ScanFacts::default(),
+            ai_profile: None,
+        }
+    }
+
+    // ── 🔴 审计留痕（成功与失败都要写）───────────────────────────
+    //
+    // 这是本次缺陷修复的核心行为：旧代码 `complete(...).await?` 失败就跳过
+    // 了末尾的 audit，导致"数据已出网但审计无痕"。以下测试直接盯着 audit 函数。
+
+    /// 成功路径：写一条 `ok=Some(true)` 的审计。
+    #[test]
+    fn audit_writes_success_entry() {
+        let c = ctx();
+        audit(&c, &resolved_local(), &proj(), &facts(), Ok(()));
+        let logs = c.db.settings().recent_audit(10).unwrap();
+        assert_eq!(logs.len(), 1, "成功调用应写一条审计");
+        assert_eq!(logs[0].ok, Some(true));
+        assert_eq!(logs[0].error, None);
+        assert!(logs[0].summary.contains("生成项目画像"), "摘要应是画像：{}", logs[0].summary);
+        assert!(!logs[0].summary.contains("失败"), "成功摘要不该带失败标记");
+        assert_eq!(logs[0].project_id.as_deref(), Some("p1"));
+    }
+
+    /// 🔴 失败路径：**必须**也写一条审计，且 `ok=Some(false)` + 原因。
+    ///
+    /// 这条测试是本次修复的守门员。删掉 `generate()` 里 `Err` 分支的
+    /// `audit(...)` 调用，或把 audit 改回只接受成功，它都会变红。
+    #[test]
+    fn audit_writes_failure_entry_with_reason() {
+        let c = ctx();
+        let err = projectassests_domain::AiError::Provider(
+            "请求被拒绝 (400): The product is not activated".into(),
+        );
+        audit(&c, &resolved_local(), &proj(), &facts(), Err(&err));
+
+        let logs = c.db.settings().recent_audit(10).unwrap();
+        assert_eq!(logs.len(), 1, "🔴 失败调用也必须留痕");
+        assert_eq!(logs[0].ok, Some(false), "失败必须记为 Some(false)");
+        assert!(
+            logs[0].error.as_deref().unwrap_or("").contains("not activated"),
+            "失败原因必须写入，实际 {:?}", logs[0].error
+        );
+        assert!(
+            logs[0].summary.contains("失败"),
+            "失败摘要必须自带标记（导出成纯文本后 ok 列看不到）：{}", logs[0].summary
+        );
+        // 失败也要记 project_id：用户要能查"哪个项目的数据出网失败了"
+        assert_eq!(logs[0].project_id.as_deref(), Some("p1"));
+    }
+
+    /// 🔴 失败的审计不得泄漏代码原文或密钥。
+    ///
+    /// 失败分支新增了 `error` 字段，内容来自 provider。必须确认
+    /// 它只含错误消息，不含 prompt 里的项目事实（源码清单等）。
+    #[test]
+    fn audit_failure_entry_leaks_no_code_or_secret() {
+        let c = ctx();
+        let resolved = ResolvedModel {
+            route: RouteTarget::Cloud,
+            base_url: "https://example.com/v1".into(),
+            model: "some-model".into(),
+            api_key: Some("sk-super-secret-key-12345".into()),
+            forced_local: false,
+        };
+        let err = projectassests_domain::AiError::Provider("400 not activated".into());
+        audit(&c, &resolved, &proj(), &facts(), Err(&err));
+
+        let logs = c.db.settings().recent_audit(10).unwrap();
+        let e = &logs[0];
+        // facts() 里的源码路径不得进入审计（无论 summary 还是 error）
+        let blob = format!("{} {}", e.summary, e.error.clone().unwrap_or_default());
+        assert!(!blob.contains("video_service.py"), "审计不该含源码文件名：{blob}");
+        assert!(!blob.contains("sk-super-secret"), "🔴 审计不得含密钥：{blob}");
+        assert_eq!(e.model, "cloud:some-model", "审计只记 provider:model");
     }
 
     #[test]
@@ -1174,7 +1268,7 @@ mod tests {
         let c = ctx();
         c.db
             .projects()
-            .upsert(&spolia_domain::Project {
+            .upsert(&projectassests_domain::Project {
                 id: "p1".into(),
                 name: "a".into(),
                 path: "/tmp/a".into(),
@@ -1184,13 +1278,13 @@ mod tests {
                 created_at: None,
                 updated_at: None,
                 last_commit_at: None,
-                status: spolia_domain::ProjectStatus::Active,
+                status: projectassests_domain::ProjectStatus::Active,
                 health_score: 70,
                 completeness: None,
                 tags: vec![],
                 sensitive: false,
-                stats: spolia_domain::CodeStats::default(),
-                scan: spolia_domain::ScanFacts::default(),
+                stats: projectassests_domain::CodeStats::default(),
+                scan: projectassests_domain::ScanFacts::default(),
                 ai_profile: None,
             })
             .unwrap();
@@ -1232,7 +1326,7 @@ mod tests {
         };
         c.db
             .projects()
-            .upsert(&spolia_domain::Project {
+            .upsert(&projectassests_domain::Project {
                 id: id.into(),
                 name: "video-pipeline".into(),
                 path: "/tmp/a".into(),
@@ -1242,13 +1336,13 @@ mod tests {
                 created_at: None,
                 updated_at: None,
                 last_commit_at: None,
-                status: spolia_domain::ProjectStatus::Active,
+                status: projectassests_domain::ProjectStatus::Active,
                 health_score: 80,
                 completeness: None,
                 tags: vec![],
                 sensitive: false,
-                stats: spolia_domain::CodeStats::default(),
-                scan: spolia_domain::ScanFacts::default(),
+                stats: projectassests_domain::CodeStats::default(),
+                scan: projectassests_domain::ScanFacts::default(),
                 ai_profile: Some(profile.clone()),
             })
             .unwrap();
@@ -1337,23 +1431,23 @@ mod tests {
         // 项目路径不存在 → 无源码、无资产，任何生成都无法进行
         c.db
             .projects()
-            .upsert(&spolia_domain::Project {
+            .upsert(&projectassests_domain::Project {
                 id: "p1".into(),
                 name: "a".into(),
-                path: "/tmp/nonexistent-spolia-project".into(),
+                path: "/tmp/nonexistent-projectassests-project".into(),
                 description: String::new(),
                 language: "Python".into(),
                 framework: "-".into(),
                 created_at: None,
                 updated_at: None,
                 last_commit_at: None,
-                status: spolia_domain::ProjectStatus::Active,
+                status: projectassests_domain::ProjectStatus::Active,
                 health_score: 70,
                 completeness: None,
                 tags: vec![],
                 sensitive: false,
-                stats: spolia_domain::CodeStats::default(),
-                scan: spolia_domain::ScanFacts::default(),
+                stats: projectassests_domain::CodeStats::default(),
+                scan: projectassests_domain::ScanFacts::default(),
                 ai_profile: None,
             })
             .unwrap();
@@ -1393,14 +1487,14 @@ mod tests {
         s.llm.cloud_base_url = "https://api.example.com/v1".into();
         s.llm.cloud_api_key = "sk-x".into();
         s.llm.cloud_model = "gpt-5-mini".into();
-        s.llm.route_fast = spolia_domain::RouteTarget::Cloud;
+        s.llm.route_fast = projectassests_domain::RouteTarget::Cloud;
         s.llm.sensitive_local_only = true;
         s.llm.local_base_url = String::new(); // 本地没配
         c.db.settings().save_llm(&s.llm).unwrap();
 
         c.db
             .projects()
-            .upsert(&spolia_domain::Project {
+            .upsert(&projectassests_domain::Project {
                 id: "p1".into(),
                 name: "机密项目".into(),
                 path: "/tmp/a".into(),
@@ -1410,13 +1504,13 @@ mod tests {
                 created_at: None,
                 updated_at: None,
                 last_commit_at: None,
-                status: spolia_domain::ProjectStatus::Active,
+                status: projectassests_domain::ProjectStatus::Active,
                 health_score: 70,
                 completeness: None,
                 tags: vec![],
                 sensitive: true, // 🔴 敏感
-                stats: spolia_domain::CodeStats::default(),
-                scan: spolia_domain::ScanFacts::default(),
+                stats: projectassests_domain::CodeStats::default(),
+                scan: projectassests_domain::ScanFacts::default(),
                 ai_profile: None,
             })
             .unwrap();
@@ -1432,7 +1526,7 @@ mod tests {
         // 敏感项目被强制降级到本地，而本地未配置 → NotConfigured。
         // 绝不能因为"云端可用"就把敏感数据发出去。
         assert!(
-            matches!(err, ServiceError::Ai(spolia_domain::AiError::NotConfigured)),
+            matches!(err, ServiceError::Ai(projectassests_domain::AiError::NotConfigured)),
             "敏感项目不得走云端，实际 {err:?}"
         );
     }
@@ -1455,19 +1549,19 @@ mod tests {
         s.llm.cloud_base_url = "https://api.example.com/v1".into();
         s.llm.cloud_api_key = "sk-x".into();
         s.llm.cloud_model = "gpt-5-mini".into();
-        s.llm.route_fast = spolia_domain::RouteTarget::Cloud;
+        s.llm.route_fast = projectassests_domain::RouteTarget::Cloud;
         s.scan.level2_enabled = level2;
         c.db.settings().save_llm(&s.llm).unwrap();
         c.db.settings().save_scan(&s.scan).unwrap();
 
         // 项目路径指向一个真实存在的临时目录，否则 collect_facts 会先失败，
         // 那就测不到闸门了（断言会被"别的原因"满足 = 测试形同虚设）。
-        let dir = std::env::temp_dir().join(format!("spolia-l2-gate-{level2}"));
+        let dir = std::env::temp_dir().join(format!("projectassests-l2-gate-{level2}"));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("main.py"), "def run():\n    return 1\n").unwrap();
         c.db
             .projects()
-            .upsert(&spolia_domain::Project {
+            .upsert(&projectassests_domain::Project {
                 id: "p1".into(),
                 name: "普通项目".into(),
                 path: dir.to_string_lossy().into_owned(),
@@ -1477,13 +1571,13 @@ mod tests {
                 created_at: None,
                 updated_at: None,
                 last_commit_at: None,
-                status: spolia_domain::ProjectStatus::Active,
+                status: projectassests_domain::ProjectStatus::Active,
                 health_score: 70,
                 completeness: None,
                 tags: vec![],
                 sensitive: false, // 🔴 非敏感：否则会被敏感拦截先挡下，测不到总闸
-                stats: spolia_domain::CodeStats::default(),
-                scan: spolia_domain::ScanFacts::default(),
+                stats: projectassests_domain::CodeStats::default(),
+                scan: projectassests_domain::ScanFacts::default(),
                 ai_profile: None,
             })
             .unwrap();
@@ -1507,12 +1601,12 @@ mod tests {
         .unwrap_err();
 
         assert!(
-            matches!(err, ServiceError::Ai(spolia_domain::AiError::Disabled)),
+            matches!(err, ServiceError::Ai(projectassests_domain::AiError::Disabled)),
             "开关关闭时应返回 Disabled，实际 {err:?}"
         );
         // 不得误报成"未配置"：模型明明配好了，照着 NotConfigured 的 hint
         // 去填 API Key 是走错方向，用户要做的只是打开一个开关。
-        assert!(!matches!(err, ServiceError::Ai(spolia_domain::AiError::NotConfigured)));
+        assert!(!matches!(err, ServiceError::Ai(projectassests_domain::AiError::NotConfigured)));
         // 状态码不得是 5xx：用户主动关闭 AI 不是服务端故障，
         // 记进 error 日志会把真正的故障淹掉。
         assert_eq!(err.status_code(), 424, "应归为前置条件未满足，实际 {err:?}");
@@ -1540,8 +1634,60 @@ mod tests {
         .unwrap_err();
 
         assert!(
-            !matches!(err, ServiceError::Ai(spolia_domain::AiError::Disabled)),
+            !matches!(err, ServiceError::Ai(projectassests_domain::AiError::Disabled)),
             "开关打开时不得被总闸拦下，实际 {err:?}"
+        );
+    }
+
+    /// 🔴🔴 端到端守门员：**走完 `generate()` 到 LLM 调用失败后，审计里必须有一条 `ok=false`**。
+    ///
+    /// # 为什么单元测试 `audit_writes_failure_entry_with_reason` 不够
+    /// 那条只证明"audit 函数被喂 `Err` 时会写对记录"。但本次缺陷的本质是
+    /// **`generate()` 的失败路径压根没调用 audit**（旧代码 `complete(...).await?`
+    /// 直接 return，跳过了函数末尾的 audit）。单元测试永远照不到"调用点有没有接线"——
+    /// 必须从 `generate()` 入口走一遍，才能证明失败分支真的接上了 audit。
+    ///
+    /// # 构造：真实的失败 LLM 调用
+    /// `ctx_cloud_ready(true)` 的项目路径是真实存在的临时目录，
+    /// `collect_facts` 成功、闸门放行，于是流程真的走到 `provider.complete()`；
+    /// 而 `api.example.com` 在测试环境不可达 → 返回连接错误 → 触发 `Err` 分支。
+    /// 这正是"prompt 已发出、调用失败"的最小可复现场景。
+    #[test]
+    fn generate_writes_failed_audit_when_llm_call_fails() {
+        let c = ctx_cloud_ready(true);
+        assert!(
+            c.db.settings().recent_audit(10).unwrap().is_empty(),
+            "前提：调用前审计应为空"
+        );
+
+        let err = block_on(generate(
+            &c,
+            &ProfileRequest { project_id: "p1".into(), force: true },
+        ))
+        .unwrap_err();
+        // 确认失败发生在**模型调用**环节（连接类错误），而非更靠前的前置检查。
+        // 否则测试会被"别的原因的失败"满足 —— 那条路径不写审计，断言就失去意义。
+        assert!(
+            matches!(err, ServiceError::Ai(_)),
+            "应是模型调用阶段的失败，实际 {err:?}"
+        );
+
+        let logs = c.db.settings().recent_audit(10).unwrap();
+        assert_eq!(logs.len(), 1, "🔴 失败的模型调用必须在审计里留下恰好一条记录");
+        assert_eq!(logs[0].ok, Some(false), "必须标为失败");
+        assert!(
+            logs[0].error.as_ref().is_some_and(|e| !e.is_empty()),
+            "必须带失败原因，实际 {:?}", logs[0].error
+        );
+        assert_eq!(logs[0].project_id.as_deref(), Some("p1"), "要能查是哪个项目");
+        assert!(
+            logs[0].summary.contains("失败"),
+            "摘要必须自带失败标记：{}", logs[0].summary
+        );
+        // 🔴 失败不得写假画像（与 generate_never_writes_template_profile_on_failure 呼应）
+        assert!(
+            c.db.projects().get("p1").unwrap().unwrap().ai_profile.is_none(),
+            "失败路径不得写入画像"
         );
     }
 
@@ -1549,14 +1695,14 @@ mod tests {
     #[test]
     fn level2_disabled_still_serves_cached_profile() {
         let c = ctx_cloud_ready(false);
-        let profile = spolia_domain::ProjectAiProfile {
+        let profile = projectassests_domain::ProjectAiProfile {
             summary: "此前生成的画像".into(),
             purpose: None,
             phase: None,
             highlights: vec![],
             archaeology: None,
             generated_by: "local:qwen3:8b".into(),
-            generated_at: spolia_storage::now_utc(),
+            generated_at: projectassests_storage::now_utc(),
         };
         c.db.projects().set_ai_profile("p1", &profile).unwrap();
 

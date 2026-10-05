@@ -17,7 +17,7 @@
 
 use std::collections::BTreeMap;
 
-use spolia_domain::{
+use projectassests_domain::{
     Asset, AssetType, Opportunity, OpportunityAnalysis, ReusableItem, UserFeedback,
 };
 
@@ -25,7 +25,7 @@ use crate::input::AnalysisInput;
 
 /// 领域完整度参照表：`(Domain 稳定键, 一个完整产品通常需要的能力名)`。
 ///
-/// 能力名必须与 `spolia-asset` 的规则表产出名一致（大小写不敏感匹配），
+/// 能力名必须与 `projectassests-asset` 的规则表产出名一致（大小写不敏感匹配），
 /// 否则永远匹配不上、参照表形同虚设。
 /// `lib.rs` 里有一致性测试强制检查这一点。
 ///
@@ -321,7 +321,7 @@ impl OpportunityEngine {
                 rating,
                 why,
                 evidence,
-                status: spolia_domain::OpportunityStatus::New,
+                status: projectassests_domain::OpportunityStatus::New,
                 created_at: today.clone(),
             });
         }
@@ -493,7 +493,7 @@ fn slug_dir(s: &str) -> String {
 mod tests {
     use super::*;
     use crate::input::tests::{asset, cap, implements, project};
-    use spolia_domain::{CapabilityLayer, EntityKind, ProjectStatus, RelationType};
+    use projectassests_domain::{CapabilityLayer, EntityKind, ProjectStatus, RelationType};
 
     fn now() -> chrono::DateTime<chrono::Utc> {
         chrono::DateTime::parse_from_rfc3339("2026-09-29T00:00:00Z")
@@ -815,8 +815,8 @@ mod tests {
     /// 否则永远匹配不到、所有机会卡片都会显示"全部缺失"。
     #[test]
     fn reference_names_are_recognized_capability_names() {
-        // 从 spolia-asset 的规则表取出全部已知能力名
-        let known: Vec<String> = spolia_asset::DOMAINS
+        // 从 projectassests-asset 的规则表取出全部已知能力名
+        let known: Vec<String> = projectassests_asset::DOMAINS
             .iter()
             .map(|(_, label)| label.to_string())
             .collect();
@@ -844,7 +844,7 @@ mod tests {
     /// 参照表的 domain 键必须是能力树里真实存在的 Domain id 后缀。
     #[test]
     fn reference_keys_match_domain_ids() {
-        let valid: Vec<String> = spolia_asset::DOMAINS.iter().map(|(k, _)| k.to_string()).collect();
+        let valid: Vec<String> = projectassests_asset::DOMAINS.iter().map(|(k, _)| k.to_string()).collect();
         for (key, _) in DOMAIN_COMPLETENESS {
             assert!(valid.contains(&key.to_string()), "参照表 domain 键「{key}」不在 DOMAINS 中");
         }

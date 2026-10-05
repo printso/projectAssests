@@ -1,5 +1,5 @@
 # ============================================================
-# Spolia — .gitignore
+# projectAssests — .gitignore
 # 本地优先桌面软件：避免把本机数据 / 构建产物 / 依赖推上 GitHub。
 # ============================================================
 
@@ -8,6 +8,7 @@
 # 排查 / 验证用的独立构建目录（编译验证副本，非交付物，体积巨大）
 target-probefix/
 target-uxcheck/
+target-renamecheck/
 **/*.rs.bk
 Cargo.lock.bak
 

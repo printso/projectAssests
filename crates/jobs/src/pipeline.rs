@@ -20,16 +20,16 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use spolia_asset::{
+use projectassests_asset::{
     build_duplicate_relations, AssetBuilder, AssetRef, CapabilitySignals, HeuristicExtractor,
     ProjectInput, SymbolExtractor,
 };
-use spolia_domain::{JobType, Project, Relation, ScanFacts, Settings, SymbolStats};
-use spolia_insight::{AnalysisInput, DetectorConfig, OpportunityConfig, OpportunityEngine};
-use spolia_scanner::{
+use projectassests_domain::{JobType, Project, Relation, ScanFacts, Settings, SymbolStats};
+use projectassests_insight::{AnalysisInput, DetectorConfig, OpportunityConfig, OpportunityEngine};
+use projectassests_scanner::{
     parse_manifests, to_domain_project, ProgressSink, ScanConfig, ScanOutcome, Scanner,
 };
-use spolia_storage::{ActivityIcon, AssetWriteOutcome};
+use projectassests_storage::{ActivityIcon, AssetWriteOutcome};
 
 use crate::engine::{JobContext, JobHandler, TaskHandle};
 use crate::walk::{list_source_files, read_source, top_dirs_of};
@@ -332,11 +332,11 @@ impl JobHandler for IndexCodeHandler {
                 .db
                 .projects()
                 .list(
-                    &spolia_storage::ProjectFilter {
+                    &projectassests_storage::ProjectFilter {
                         limit: Some(MAX_PROJECTS_PER_SCAN as u32),
                         ..Default::default()
                     },
-                    spolia_storage::ProjectSort::RecentlyUpdated,
+                    projectassests_storage::ProjectSort::RecentlyUpdated,
                 )
                 .map_err(db_err)?,
         };
@@ -469,7 +469,7 @@ impl IndexCodeHandler {
         };
 
         // 3. 装配资产/能力/关系（builder 是纯函数，时间由调用方注入）
-        let created_at = spolia_storage::today_local();
+        let created_at = projectassests_storage::today_local();
         let input = ProjectInput {
             project_id: &project.id,
             project_name: &project.name,
@@ -534,11 +534,11 @@ fn build_cross_project_relations(ctx: &JobContext) -> Result<Vec<Relation>, Stri
         .db
         .assets()
         .list(
-            &spolia_storage::AssetFilter {
+            &projectassests_storage::AssetFilter {
                 limit: Some(20_000),
                 ..Default::default()
             },
-            spolia_storage::AssetSort::ReuseScore,
+            projectassests_storage::AssetSort::ReuseScore,
         )
         .map_err(db_err)?;
 
@@ -592,7 +592,7 @@ impl JobHandler for InsightHandler {
         }
 
         // 2. 洞察检测
-        let detected = spolia_insight::detect_all(&input, &DetectorConfig::default());
+        let detected = projectassests_insight::detect_all(&input, &DetectorConfig::default());
         ctx.db
             .insights()
             .upsert_batch(&detected.insights)
@@ -635,24 +635,24 @@ fn load_analysis_input(ctx: &JobContext) -> Result<AnalysisInput, String> {
         .db
         .projects()
         .list(
-            &spolia_storage::ProjectFilter {
+            &projectassests_storage::ProjectFilter {
                 limit: Some(MAX_PROJECTS_PER_SCAN as u32),
                 ..Default::default()
             },
-            spolia_storage::ProjectSort::RecentlyUpdated,
+            projectassests_storage::ProjectSort::RecentlyUpdated,
         )
         .map_err(db_err)?;
     let assets = ctx
         .db
         .assets()
         .list(
-            &spolia_storage::AssetFilter {
+            &projectassests_storage::AssetFilter {
                 // 洞察同样受"无证据不展示"约束
                 evidence_required: true,
                 limit: Some(20_000),
                 ..Default::default()
             },
-            spolia_storage::AssetSort::ReuseScore,
+            projectassests_storage::AssetSort::ReuseScore,
         )
         .map_err(db_err)?;
     let capabilities = ctx.db.capabilities().list_all().map_err(db_err)?;
@@ -697,7 +697,7 @@ pub fn build_default_handlers() -> Vec<(JobType, Arc<dyn JobHandler>)> {
 ///
 /// 🔴 不直接把 `StorageError` 的 Display 抛给用户：
 /// 它可能含数据库文件路径，属内部实现细节。
-fn db_err(e: spolia_domain::StorageError) -> String {
+fn db_err(e: projectassests_domain::StorageError) -> String {
     tracing::error!(error = %e, "流水线数据库操作失败");
     "数据库操作失败，请查看日志了解详情".to_string()
 }
@@ -725,8 +725,8 @@ pub fn validate_settings(settings: &Settings) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{Asset, AssetType, CodeStats, Evidence, ProjectStatus};
-    use spolia_storage::Database;
+    use projectassests_domain::{Asset, AssetType, CodeStats, Evidence, ProjectStatus};
+    use projectassests_storage::Database;
     use std::fs;
 
     fn test_db() -> Arc<Database> {
@@ -761,7 +761,7 @@ mod tests {
             tags: vec![],
             sensitive: false,
             stats: CodeStats::default(),
-            scan: spolia_domain::ScanFacts::default(),
+            scan: projectassests_domain::ScanFacts::default(),
             ai_profile: None,
         }
     }
@@ -783,7 +783,7 @@ mod tests {
             !validate_settings(&settings).is_empty(),
             "无目录时必须报告问题"
         );
-        settings.scan.add_dir("/nonexistent-spolia-dir", "2026-09-29T00:00:00Z");
+        settings.scan.add_dir("/nonexistent-projectassests-dir", "2026-09-29T00:00:00Z");
         let problems = validate_settings(&settings);
         assert!(
             problems.iter().any(|p| p.contains("不存在")),
@@ -846,7 +846,7 @@ mod tests {
 
     #[test]
     fn top_dirs_of_missing_path_is_empty() {
-        assert!(top_dirs_of(std::path::Path::new("/nonexistent-spolia")).is_empty());
+        assert!(top_dirs_of(std::path::Path::new("/nonexistent-projectassests")).is_empty());
     }
 
     // ── 进度桥接 ─────────────────────────────────────────────────
@@ -906,7 +906,7 @@ mod tests {
         let job = wait_terminal(&db, &job_id).await;
         assert_eq!(
             job.status,
-            spolia_domain::JobStatus::Completed,
+            projectassests_domain::JobStatus::Completed,
             "扫描应成功: {:?}",
             job.error
         );
@@ -914,8 +914,8 @@ mod tests {
         let projects = db
             .projects()
             .list(
-                &spolia_storage::ProjectFilter::default(),
-                spolia_storage::ProjectSort::Name,
+                &projectassests_storage::ProjectFilter::default(),
+                projectassests_storage::ProjectSort::Name,
             )
             .unwrap();
         let names: Vec<&str> = projects.iter().map(|p| p.name.as_str()).collect();
@@ -942,7 +942,7 @@ mod tests {
         let engine = crate::JobEngine::new(Arc::clone(&db), build_default_handlers());
         let job_id = engine.submit(JobType::ScanProject, None).await.unwrap();
         let job = wait_terminal(&db, &job_id).await;
-        assert_eq!(job.status, spolia_domain::JobStatus::Failed);
+        assert_eq!(job.status, projectassests_domain::JobStatus::Failed);
         let err = job.error.unwrap();
         assert!(
             err.contains("设置") || err.contains("目录"),
@@ -972,9 +972,9 @@ mod tests {
         });
         let job_id = engine.submit(JobType::ScanProject, Some(payload)).await.unwrap();
         let job = wait_terminal(&db, &job_id).await;
-        assert_eq!(job.status, spolia_domain::JobStatus::Completed, "{:?}", job.error);
+        assert_eq!(job.status, projectassests_domain::JobStatus::Completed, "{:?}", job.error);
 
-        let projects = db.projects().list(&spolia_storage::ProjectFilter::default(), spolia_storage::ProjectSort::Name).unwrap();
+        let projects = db.projects().list(&projectassests_storage::ProjectFilter::default(), projectassests_storage::ProjectSort::Name).unwrap();
         let names: Vec<&str> = projects.iter().map(|p| p.name.as_str()).collect();
         assert!(names.contains(&"from_payload"), "应扫载荷目录: {names:?}");
         assert!(
@@ -1065,13 +1065,13 @@ mod tests {
         let engine = crate::JobEngine::new(Arc::clone(&db), build_default_handlers());
         let job_id = engine.submit(JobType::IndexCode, None).await.unwrap();
         let job = wait_terminal(&db, &job_id).await;
-        assert_eq!(job.status, spolia_domain::JobStatus::Completed, "{:?}", job.error);
+        assert_eq!(job.status, projectassests_domain::JobStatus::Completed, "{:?}", job.error);
 
         let assets = db
             .assets()
             .list(
-                &spolia_storage::AssetFilter::default(),
-                spolia_storage::AssetSort::ReuseScore,
+                &projectassests_storage::AssetFilter::default(),
+                projectassests_storage::AssetSort::ReuseScore,
             )
             .unwrap();
         assert!(!assets.is_empty(), "应从真实源码抽出资产");
@@ -1103,7 +1103,7 @@ mod tests {
         let engine = crate::JobEngine::new(Arc::clone(&db), build_default_handlers());
         let job_id = engine.submit(JobType::IndexCode, None).await.unwrap();
         let job = wait_terminal(&db, &job_id).await;
-        assert_eq!(job.status, spolia_domain::JobStatus::Failed);
+        assert_eq!(job.status, projectassests_domain::JobStatus::Failed);
         assert!(
             job.error.unwrap().contains("扫描"),
             "错误应指引用户先扫描"
@@ -1118,7 +1118,7 @@ mod tests {
         let payload = serde_json::json!({"project_id": "ghost"});
         let job_id = engine.submit(JobType::IndexCode, Some(payload)).await.unwrap();
         let job = wait_terminal(&db, &job_id).await;
-        assert_eq!(job.status, spolia_domain::JobStatus::Failed);
+        assert_eq!(job.status, projectassests_domain::JobStatus::Failed);
         assert!(job.error.unwrap().contains("ghost"));
     }
 
@@ -1161,11 +1161,11 @@ mod tests {
         let engine = crate::JobEngine::new(Arc::clone(&db), build_default_handlers());
         let job_id = engine.submit(JobType::GenerateInsight, None).await.unwrap();
         let job = wait_terminal(&db, &job_id).await;
-        assert_eq!(job.status, spolia_domain::JobStatus::Completed, "{:?}", job.error);
+        assert_eq!(job.status, projectassests_domain::JobStatus::Completed, "{:?}", job.error);
 
         let insights = db
             .insights()
-            .list(&spolia_storage::InsightFilter::default())
+            .list(&projectassests_storage::InsightFilter::default())
             .unwrap();
         assert!(!insights.is_empty(), "应检测到跨项目重复实现");
         // 🔴 每条洞察都必须有证据（产品红线：无证据的结论不展示）。
@@ -1192,7 +1192,7 @@ mod tests {
         let engine = crate::JobEngine::new(Arc::clone(&db), build_default_handlers());
         let job_id = engine.submit(JobType::GenerateInsight, None).await.unwrap();
         let job = wait_terminal(&db, &job_id).await;
-        assert_eq!(job.status, spolia_domain::JobStatus::Failed);
+        assert_eq!(job.status, projectassests_domain::JobStatus::Failed);
         assert!(job.error.unwrap().contains("扫描"));
     }
 
@@ -1209,7 +1209,7 @@ mod tests {
         assert!(
             matches!(
                 job.status,
-                spolia_domain::JobStatus::Completed | spolia_domain::JobStatus::Cancelled
+                projectassests_domain::JobStatus::Completed | projectassests_domain::JobStatus::Cancelled
             ),
             "应进入正常终态，实际 {:?}",
             job.status
@@ -1238,13 +1238,13 @@ mod tests {
         let payload = serde_json::json!({"dirs": [dir.path().to_string_lossy()], "analyze_git": false});
         let j1 = engine.submit(JobType::ScanProject, Some(payload)).await.unwrap();
         let job1 = wait_terminal(&db, &j1).await;
-        assert_eq!(job1.status, spolia_domain::JobStatus::Completed, "{:?}", job1.error);
+        assert_eq!(job1.status, projectassests_domain::JobStatus::Completed, "{:?}", job1.error);
         assert_eq!(db.projects().count().unwrap(), 2, "应发现两个项目");
 
         // 阶段二：索引
         let j2 = engine.submit(JobType::IndexCode, None).await.unwrap();
         let job2 = wait_terminal(&db, &j2).await;
-        assert_eq!(job2.status, spolia_domain::JobStatus::Completed, "{:?}", job2.error);
+        assert_eq!(job2.status, projectassests_domain::JobStatus::Completed, "{:?}", job2.error);
         let asset_count = db.assets().count_all().unwrap();
         assert!(asset_count > 0, "应抽出资产");
         let cap_count = db.capabilities().list_all().unwrap().len();
@@ -1253,10 +1253,10 @@ mod tests {
         // 阶段三：洞察
         let j3 = engine.submit(JobType::GenerateInsight, None).await.unwrap();
         let job3 = wait_terminal(&db, &j3).await;
-        assert_eq!(job3.status, spolia_domain::JobStatus::Completed, "{:?}", job3.error);
+        assert_eq!(job3.status, projectassests_domain::JobStatus::Completed, "{:?}", job3.error);
 
         // 数据可被检索到（证明 FTS 索引也同步了）
-        let search = spolia_storage::RetrievalRepo::new(db.pool());
+        let search = projectassests_storage::RetrievalRepo::new(db.pool());
         let hits = search.projects("proj", 20).unwrap();
         assert_eq!(hits.len(), 2, "扫描结果应可被检索到");
 
@@ -1278,7 +1278,7 @@ mod tests {
                 .await
                 .unwrap();
             let job = wait_terminal(&db, &job_id).await;
-            assert_eq!(job.status, spolia_domain::JobStatus::Completed, "第 {round} 轮: {:?}", job.error);
+            assert_eq!(job.status, projectassests_domain::JobStatus::Completed, "第 {round} 轮: {:?}", job.error);
         }
         assert_eq!(
             db.projects().count().unwrap(),
@@ -1298,7 +1298,7 @@ mod tests {
         // 提交后立即取消：扫描可能还没开始
         engine.cancel(&job_id).unwrap();
         let job = wait_terminal(&db, &job_id).await;
-        assert_eq!(job.status, spolia_domain::JobStatus::Cancelled);
+        assert_eq!(job.status, projectassests_domain::JobStatus::Cancelled);
         // 取消发生在写库之前 → 库里应无项目；
         // 若已写库，数据必须完整（不存在半条记录）。两种情况都不该 panic。
         let count = db.projects().count().unwrap();
@@ -1335,7 +1335,7 @@ mod tests {
     /// 存储错误不得把内部路径抛给用户。
     #[test]
     fn db_err_hides_internals() {
-        let e = spolia_domain::StorageError::Unavailable {
+        let e = projectassests_domain::StorageError::Unavailable {
             path: "C:/secret/user/path.db".into(),
             reason: "拒绝访问".into(),
         };
@@ -1345,7 +1345,7 @@ mod tests {
         assert!(msg.contains("数据库"), "应说明是数据库问题: {msg}");
     }
 
-    async fn wait_terminal(db: &Database, job_id: &str) -> spolia_domain::Job {
+    async fn wait_terminal(db: &Database, job_id: &str) -> projectassests_domain::Job {
         for _ in 0..400 {
             if let Ok(Some(job)) = db.jobs().get(job_id)
                 && job.status.is_terminal()

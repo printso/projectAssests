@@ -3,10 +3,10 @@ import { defineConfig } from "file:///F:/CodeProject/projectAssests/apps/desktop
 import react from "file:///F:/CodeProject/projectAssests/apps/desktop/node_modules/@vitejs/plugin-react/dist/index.mjs";
 import { fileURLToPath, URL } from "node:url";
 var __vite_injected_original_import_meta_url = "file:///F:/CodeProject/projectAssests/apps/desktop/vite.config.ts";
-var API_TARGET = process.env.SPOLIA_API ?? "http://127.0.0.1:8787";
-var DEV_PORT = Number(process.env.SPOLIA_PORT ?? 5174);
+var API_TARGET = process.env.PROJECTASSENTS_API ?? "http://127.0.0.1:8787";
+var DEV_PORT = Number(process.env.PROJECTASSENTS_PORT ?? 5174);
 if (!Number.isInteger(DEV_PORT) || DEV_PORT < 1 || DEV_PORT > 65535) {
-  throw new Error(`SPOLIA_PORT \u4E0D\u662F\u5408\u6CD5\u7AEF\u53E3\u53F7\uFF1A${String(process.env.SPOLIA_PORT)}`);
+  throw new Error(`PROJECTASSENTS_PORT \u4E0D\u662F\u5408\u6CD5\u7AEF\u53E3\u53F7\uFF1A${String(process.env.PROJECTASSENTS_PORT)}`);
 }
 var vite_config_default = defineConfig({
   plugins: [react()],

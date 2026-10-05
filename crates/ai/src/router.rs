@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use spolia_domain::{AiError, JobType, LlmSettings, LocalBackend, RouteTarget};
+use projectassests_domain::{AiError, JobType, LlmSettings, LocalBackend, RouteTarget};
 
 use crate::ollama::OllamaProvider;
 use crate::openai::OpenAiCompatibleProvider;
@@ -288,7 +288,7 @@ fn not_configured_message(settings: &LlmSettings, route: Option<RouteTarget>) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{CloudProvider, JobType, RouteTarget};
+    use projectassests_domain::{CloudProvider, JobType, RouteTarget};
 
     fn ollama_settings() -> LlmSettings {
         LlmSettings {

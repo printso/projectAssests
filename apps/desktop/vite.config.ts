@@ -3,15 +3,15 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 
 // 🔴 后端地址只在这一处定义（单一真相源）。
-// 用 `SPOLIA_API` 环境变量覆盖，便于连不同端口/远程实例调试。
-const API_TARGET = process.env.SPOLIA_API ?? "http://127.0.0.1:8787";
+// 用 `PROJECTASSENTS_API` 环境变量覆盖，便于连不同端口/远程实例调试。
+const API_TARGET = process.env.PROJECTASSENTS_API ?? "http://127.0.0.1:8787";
 
 // 🔴 默认避开 5173：本机另有无关项目的 dev server 长期占用它（Vibe Hardware）。
-// 用 `SPOLIA_PORT` 覆盖。非法值直接抛错——与 strictPort 同一哲学：
+// 用 `PROJECTASSENTS_PORT` 覆盖。非法值直接抛错——与 strictPort 同一哲学：
 // 宁可启动失败，也不要静默漂移到别的端口（那会让人打开并"验证"到别人家的页面）。
-const DEV_PORT = Number(process.env.SPOLIA_PORT ?? 5174);
+const DEV_PORT = Number(process.env.PROJECTASSENTS_PORT ?? 5174);
 if (!Number.isInteger(DEV_PORT) || DEV_PORT < 1 || DEV_PORT > 65535) {
-  throw new Error(`SPOLIA_PORT 不是合法端口号：${String(process.env.SPOLIA_PORT)}`);
+  throw new Error(`PROJECTASSENTS_PORT 不是合法端口号：${String(process.env.PROJECTASSENTS_PORT)}`);
 }
 
 export default defineConfig({

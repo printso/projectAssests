@@ -245,7 +245,7 @@ pub fn load(ctx: &ServiceContext) -> Result<Overview, ServiceError> {
     // ── 洞察 / 机会 / 活动 ──────────────────────────────────────
     let recent_insights = db
         .insights()
-        .list(&spolia_storage::InsightFilter {
+        .list(&projectassests_storage::InsightFilter {
             limit: Some(RECENT_INSIGHTS_LIMIT as u32),
             ..Default::default()
         })?
@@ -272,7 +272,7 @@ pub fn load(ctx: &ServiceContext) -> Result<Overview, ServiceError> {
 
     let top_opportunities = db
         .opportunities()
-        .list(&spolia_storage::OpportunityFilter::actionable())?
+        .list(&projectassests_storage::OpportunityFilter::actionable())?
         .into_iter()
         .take(TOP_OPPORTUNITIES_LIMIT)
         .map(|o| OpportunityBrief {
@@ -352,7 +352,7 @@ fn recent_job(ctx: &ServiceContext) -> Result<Option<JobBrief>, ServiceError> {
         .map(job_brief))
 }
 
-fn job_brief(j: spolia_domain::Job) -> JobBrief {
+fn job_brief(j: projectassests_domain::Job) -> JobBrief {
     JobBrief {
         id: j.id.clone(),
         type_label: j.job_type.label_zh().to_string(),
@@ -457,7 +457,7 @@ fn build_onboarding(
     }
 
     let headline = if !has_dirs {
-        "从一个目录开始：Spolia 会把你写过的东西变成可检索、可复用的资产"
+        "从一个目录开始：projectAssests 会把你写过的东西变成可检索、可复用的资产"
     } else if project_count == 0 {
         "目录已添加，还没扫描过"
     } else {
@@ -498,7 +498,7 @@ pub fn opportunity_status_breakdown(ctx: &ServiceContext) -> Result<Vec<TopItem>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{
+    use projectassests_domain::{
         Asset, AssetType, Capability, CapabilityLayer, CodeStats, Evidence, Insight, InsightType,
         Job, JobStatus, JobType, OpportunityStatus, Project, ProjectStatus, ScanFacts,
     };
@@ -723,23 +723,106 @@ mod tests {
         assert!(ob.steps[3].done, "配置了云端 Key 应算完成");
     }
 
-    /// 本地模型跑通过（审计日志有记录）也算完成——这是"真的能用"的证据。
+    /// 本地模型跑通过（审计日志有**成功**记录）才算完成——这是"真的能用"的证据。
     #[test]
     fn llm_step_done_after_successful_local_call() {
         let c = ctx();
         c.db
             .settings()
-            .audit(&spolia_domain::AuditEntry {
-                at: "2026-09-29T10:00:00Z".into(),
-                model: "ollama:qwen3:8b".into(),
-                route: spolia_domain::RouteTarget::Local,
-                job_type: "ANALYZE_PROJECT".into(),
-                summary: "分析项目 p1".into(),
-                project_id: Some("p1".into()),
-            })
+            .audit(&projectassests_domain::AuditEntry::llm_ok(
+                "2026-09-29T10:00:00Z",
+                "ollama:qwen3:8b",
+                projectassests_domain::RouteTarget::Local,
+                "ANALYZE_PROJECT",
+                "分析项目 p1",
+                Some("p1".into()),
+            ))
             .unwrap();
         let ob = load(&c).unwrap().onboarding.unwrap();
-        assert!(ob.steps[3].done, "有模型调用记录说明已可用");
+        assert!(ob.steps[3].done, "有成功调用记录说明已可用");
+    }
+
+    /// 🔴 **只有失败**记录时，该步必须仍是未完成。
+    ///
+    /// schema v3 起失败调用也写审计（prompt 已出网，必须留痕）。
+    /// 于是"审计非空 ⇒ 模型可用过"这个旧推理失效了：
+    /// 一次 400 未开通的调用同样会留下一条记录，而它恰恰证明模型**不可用**。
+    /// 若这里谎报完成，用户就不会去配置，点分析时才发现根本没通。
+    #[test]
+    fn llm_step_not_done_after_only_failed_calls() {
+        let c = ctx();
+        c.db
+            .settings()
+            .audit(&projectassests_domain::AuditEntry::llm_failed(
+                "2026-09-29T10:00:00Z",
+                "cloud:ZHIPU/GLM-5.3-FlashX",
+                projectassests_domain::RouteTarget::Cloud,
+                "ANALYZE_PROJECT",
+                "生成项目画像（失败）",
+                Some("p1".into()),
+                "请求被拒绝 (400): The product is not activated",
+            ))
+            .unwrap();
+        // 先确认前提：审计里确实有记录（否则这条测试会因"根本没数据"而假通过）
+        assert!(
+            !c.db.settings().recent_audit(10).unwrap().is_empty(),
+            "前提不成立：失败调用应已写入审计"
+        );
+        assert!(
+            !c.db.settings().has_successful_llm_call().unwrap(),
+            "只有失败记录时不应判定为'成功调用过'"
+        );
+        let ob = load(&c).unwrap().onboarding.unwrap();
+        assert!(
+            !ob.steps[3].done,
+            "🔴 只有失败记录时绝不能把「配置大模型」标成已完成"
+        );
+    }
+
+    /// 失败之后又成功了 ⇒ 算完成（成功记录一旦出现就该认）。
+    #[test]
+    fn llm_step_done_after_fail_then_success() {
+        let c = ctx();
+        c.db
+            .settings()
+            .audit(&projectassests_domain::AuditEntry::llm_failed(
+                "2026-09-29T10:00:00Z", "cloud:m", projectassests_domain::RouteTarget::Cloud,
+                "ANALYZE_PROJECT", "失败", None, "400",
+            ))
+            .unwrap();
+        c.db
+            .settings()
+            .audit(&projectassests_domain::AuditEntry::llm_ok(
+                "2026-09-29T11:00:00Z", "cloud:m", projectassests_domain::RouteTarget::Cloud,
+                "ANALYZE_PROJECT", "成功", None,
+            ))
+            .unwrap();
+        assert!(c.db.settings().has_successful_llm_call().unwrap());
+        let ob = load(&c).unwrap().onboarding.unwrap();
+        assert!(ob.steps[3].done, "后来成功了就该算可用");
+    }
+
+    /// 本地安全事件（`ok = None`）不能算"模型可用过"。
+    ///
+    /// 用户取消敏感标记只是改了个设置，与模型能否调用毫无关系。
+    #[test]
+    fn llm_step_not_done_by_security_event_audit() {
+        let c = ctx();
+        c.db
+            .settings()
+            .audit(&projectassests_domain::AuditEntry::event(
+                "2026-09-29T10:00:00Z",
+                "SETTINGS",
+                "用户关闭了「敏感项目仅本地」约束",
+                None,
+            ))
+            .unwrap();
+        assert!(
+            !c.db.settings().has_successful_llm_call().unwrap(),
+            "安全事件不是模型调用，不能算成功记录"
+        );
+        let ob = load(&c).unwrap().onboarding.unwrap();
+        assert!(!ob.steps[3].done);
     }
 
     /// 第四步是可选的：即使没配模型，前三步完成就该让引导消失。
@@ -831,7 +914,7 @@ mod tests {
         let c = ctx();
         c.db
             .activities()
-            .push(spolia_storage::ActivityIcon::Scan, "扫描完成", "发现 12 个项目")
+            .push(projectassests_storage::ActivityIcon::Scan, "扫描完成", "发现 12 个项目")
             .unwrap();
         let o = load(&c).unwrap();
         assert_eq!(o.activities.len(), 1);
@@ -847,7 +930,7 @@ mod tests {
         for i in 0..20 {
             c.db
                 .activities()
-                .push(spolia_storage::ActivityIcon::Check, format!("t{i}"), "d")
+                .push(projectassests_storage::ActivityIcon::Check, format!("t{i}"), "d")
                 .unwrap();
         }
         assert!(load(&c).unwrap().activities.len() <= ACTIVITIES_LIMIT);
@@ -865,8 +948,8 @@ mod tests {
             description: format!("{title} 的说明"),
             confidence: 0.85,
             // 产品红线：evidence 为空的洞察不允许入库
-            evidence: vec![spolia_domain::EvidenceItem {
-                kind: spolia_domain::EvidenceKind::Project,
+            evidence: vec![projectassests_domain::EvidenceItem {
+                kind: projectassests_domain::EvidenceKind::Project,
                 label: "项目A".into(),
                 target: Some("p1".into()),
             }],
@@ -916,7 +999,7 @@ mod tests {
         let c = ctx();
         c.db
             .opportunities()
-            .upsert(&spolia_domain::Opportunity {
+            .upsert(&projectassests_domain::Opportunity {
                 id: "o1".into(),
                 title: "视频工具组合".into(),
                 description: "把三个项目的视频能力拼起来".into(),

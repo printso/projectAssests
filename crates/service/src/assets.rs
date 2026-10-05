@@ -11,8 +11,8 @@
 //! 要看到"抽取了但被门禁拒了多少"，用 `type_breakdown` 的 `total_including_rejected`。
 
 use serde::{Deserialize, Serialize};
-use spolia_domain::{Asset, AssetType, ReuseTier, UserFeedback};
-use spolia_storage::{AssetFilter, AssetSort};
+use projectassests_domain::{Asset, AssetType, ReuseTier, UserFeedback};
+use projectassests_storage::{AssetFilter, AssetSort};
 
 use crate::context::{ServiceContext, ServiceError};
 
@@ -443,12 +443,12 @@ fn list_item(
         tags: a.tags.clone(),
         created_at: a.created_at.clone(),
         evidence_files: a.evidence.file_count(),
-        created_relative: spolia_storage::relative_time(&a.created_at, now),
+        created_relative: projectassests_storage::relative_time(&a.created_at, now),
         user_feedback: a.user_feedback.map(|f| f.as_str().to_string()),
     }
 }
 
-fn evidence_view(e: &spolia_domain::Evidence) -> EvidenceView {
+fn evidence_view(e: &projectassests_domain::Evidence) -> EvidenceView {
     EvidenceView {
         files: e.files.clone(),
         commits: e.commits.clone(),
@@ -606,7 +606,7 @@ fn parse_feedback(v: &str) -> Result<UserFeedback, ServiceError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{CodeStats, Evidence, Project, ProjectStatus, ScanFacts};
+    use projectassests_domain::{CodeStats, Evidence, Project, ProjectStatus, ScanFacts};
 
     fn ctx() -> ServiceContext {
         ServiceContext::in_memory().unwrap()
@@ -659,7 +659,7 @@ mod tests {
             generality: 0.8,
             stability: 0.7,
             tags: vec!["rust".to_string()],
-            created_at: spolia_storage::now_utc(),
+            created_at: projectassests_storage::now_utc(),
             evidence: Evidence {
                 files: vec![format!("src/{name}.rs")],
                 ..Evidence::default()

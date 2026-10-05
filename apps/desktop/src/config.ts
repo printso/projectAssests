@@ -1,7 +1,7 @@
 /**
  * 前端常量配置。
  *
- * 🔴 品牌信息在后端 `spolia_domain::BRAND` 里也有一份，但**没有 API 暴露它**。
+ * 🔴 品牌信息在后端 `projectassests_domain::BRAND` 里也有一份，但**没有 API 暴露它**。
  * 这里刻意保留副本并注明来源，而不是加一个只返回两个字符串的端点：
  * 品牌名改动频率极低（改了要同时更新文档、图标、安装包名），
  * 为它增加一次网络往返和一个端点不划算。
@@ -11,7 +11,7 @@
  */
 
 export const BRAND = {
-  name: "Spolia",
+  name: "projectAssests",
   sub: "Your Personal R&D OS",
   logo: "S",
   tagline: "让过去的每一个项目，都成为你未来的可能性",

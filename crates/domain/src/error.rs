@@ -1,7 +1,7 @@
 //! 统一错误类型。
 //!
 //! 设计原则（面向开源协作与可维护性）：
-//! 1. **每个引擎定义自己的错误枚举**，通过 `From` 转换汇入 [`SpoliaError`]，
+//! 1. **每个引擎定义自己的错误枚举**，通过 `From` 转换汇入 [`ProjectAssestsError`]，
 //!    避免"一个巨型 Error 枚举"变成所有人都要改的耦合点。
 //! 2. 错误必须**可展示给用户**：`Display` 输出人类可读中文，不含内部路径泄漏。
 //! 3. 错误必须**可映射为 HTTP 状态码**（见 `status_code`），前端据此决定提示方式。
@@ -11,7 +11,7 @@ use thiserror::Error;
 
 /// 顶层错误。
 #[derive(Debug, Error)]
-pub enum SpoliaError {
+pub enum ProjectAssestsError {
     #[error("存储层错误: {0}")]
     Storage(#[from] StorageError),
 
@@ -44,7 +44,7 @@ pub enum SpoliaError {
 ///
 /// 注意：这里**不**包含 `rusqlite::Error` 变体。领域层不应感知具体存储技术，
 /// 否则换存储实现（《技术设计书》§25 提到向量层可平滑切到 LanceDB）会波及全部上层。
-/// 由 `spolia-storage` 在自己的边界把驱动错误转成带上下文的字符串。
+/// 由 `projectassests-storage` 在自己的边界把驱动错误转成带上下文的字符串。
 #[derive(Debug, Error)]
 pub enum StorageError {
     #[error("数据库操作失败: {context} ({reason})")]
@@ -58,7 +58,7 @@ pub enum StorageError {
     /// 且没有任何编译期保护（本项目已明令禁止这种写法，见 `service/context.rs`
     /// 中 `Job(AlreadyRunning)` 的注释）。
     ///
-    /// 这里由 `spolia-storage` 在**类型层面**根据 `rusqlite::ErrorCode`
+    /// 这里由 `projectassests-storage` 在**类型层面**根据 `rusqlite::ErrorCode`
     /// （`DatabaseBusy` / `DatabaseLocked`）分类，domain 只认这个枚举，
     /// 不依赖 rusqlite，也不需要看字符串。
     ///
@@ -82,7 +82,7 @@ impl StorageError {
     /// 在存储层边界把驱动错误转为领域错误，附带操作上下文便于排查。
     ///
     /// ⚠️ 这个方法**不识别 busy**：它收 `impl Display`，拿不到 SQLite 错误码。
-    /// 写路径上需要区分锁竞争的调用点，应改用 `spolia-storage` 里的
+    /// 写路径上需要区分锁竞争的调用点，应改用 `projectassests-storage` 里的
     /// `sqlite_err(context, rusqlite::Error)`——那个会按错误码分类出 [`Self::Busy`]。
     pub fn sqlite(context: impl Into<String>, err: impl std::fmt::Display) -> Self {
         Self::Sqlite {
@@ -242,7 +242,7 @@ pub enum ConfigError {
     Persist(String),
 }
 
-impl SpoliaError {
+impl ProjectAssestsError {
     /// 映射为 HTTP 状态码。集中在此处，避免各 handler 自行判断导致不一致。
     pub fn status_code(&self) -> u16 {
         match self {
@@ -325,7 +325,7 @@ pub struct ErrorBody {
 }
 
 impl ErrorBody {
-    pub fn from_error(e: &SpoliaError) -> Self {
+    pub fn from_error(e: &ProjectAssestsError) -> Self {
         Self {
             code: e.code().to_string(),
             message: e.to_string(),
@@ -336,17 +336,17 @@ impl ErrorBody {
 }
 
 /// 为可修复错误生成引导文案。集中于此，避免各页面各写一套提示。
-fn hint_for(e: &SpoliaError) -> Option<String> {
+fn hint_for(e: &ProjectAssestsError) -> Option<String> {
     match e {
-        SpoliaError::Ai(AiError::NotConfigured) => Some("前往「设置 → 大模型配置」填写 Base URL 与 API Key，或配置本地 Ollama。".into()),
-        SpoliaError::Config(ConfigError::NoScanDirs) => Some("前往「设置 → 扫描目录」添加至少一个项目目录。".into()),
-        SpoliaError::Config(ConfigError::MissingApiKey) => Some("该提供商需要 API Key 才能调用。".into()),
-        SpoliaError::Config(ConfigError::InvalidUrl(u)) => Some(format!("「{u}」不是合法的 http(s) 地址。")),
-        SpoliaError::Search(SearchError::IndexNotReady) => Some("先在首页执行一次扫描，索引建立后即可搜索。".into()),
-        SpoliaError::Scanner(ScannerError::NotAuthorized(p)) => Some(format!("「{p}」未获得授权，请在「设置 → 扫描目录」中添加。")),
-        SpoliaError::Scanner(ScannerError::GitUnavailable) => Some("安装 Git 后可获得提交历史、活跃度与项目考古能力。".into()),
-        SpoliaError::Ai(AiError::RateLimited) => Some("模型服务限流，稍后重试或切换到本地模型。".into()),
-        SpoliaError::Ai(AiError::SensitiveBlocked) => Some("该项目被标记为敏感，仅允许本地模型处理。".into()),
+        ProjectAssestsError::Ai(AiError::NotConfigured) => Some("前往「设置 → 大模型配置」填写 Base URL 与 API Key，或配置本地 Ollama。".into()),
+        ProjectAssestsError::Config(ConfigError::NoScanDirs) => Some("前往「设置 → 扫描目录」添加至少一个项目目录。".into()),
+        ProjectAssestsError::Config(ConfigError::MissingApiKey) => Some("该提供商需要 API Key 才能调用。".into()),
+        ProjectAssestsError::Config(ConfigError::InvalidUrl(u)) => Some(format!("「{u}」不是合法的 http(s) 地址。")),
+        ProjectAssestsError::Search(SearchError::IndexNotReady) => Some("先在首页执行一次扫描，索引建立后即可搜索。".into()),
+        ProjectAssestsError::Scanner(ScannerError::NotAuthorized(p)) => Some(format!("「{p}」未获得授权，请在「设置 → 扫描目录」中添加。")),
+        ProjectAssestsError::Scanner(ScannerError::GitUnavailable) => Some("安装 Git 后可获得提交历史、活跃度与项目考古能力。".into()),
+        ProjectAssestsError::Ai(AiError::RateLimited) => Some("模型服务限流，稍后重试或切换到本地模型。".into()),
+        ProjectAssestsError::Ai(AiError::SensitiveBlocked) => Some("该项目被标记为敏感，仅允许本地模型处理。".into()),
         _ => None,
     }
 }
@@ -357,24 +357,24 @@ mod tests {
 
     #[test]
     fn status_codes_are_sensible() {
-        assert_eq!(SpoliaError::NotFound("x".into()).status_code(), 404);
-        assert_eq!(SpoliaError::BadRequest("x".into()).status_code(), 400);
-        assert_eq!(SpoliaError::Ai(AiError::Unauthorized).status_code(), 401);
-        assert_eq!(SpoliaError::Ai(AiError::RateLimited).status_code(), 429);
-        assert_eq!(SpoliaError::Ai(AiError::Timeout(30)).status_code(), 504);
-        assert_eq!(SpoliaError::Job(JobError::AlreadyRunning("j".into())).status_code(), 409);
-        assert_eq!(SpoliaError::Scanner(ScannerError::NotAuthorized("d".into())).status_code(), 403);
+        assert_eq!(ProjectAssestsError::NotFound("x".into()).status_code(), 404);
+        assert_eq!(ProjectAssestsError::BadRequest("x".into()).status_code(), 400);
+        assert_eq!(ProjectAssestsError::Ai(AiError::Unauthorized).status_code(), 401);
+        assert_eq!(ProjectAssestsError::Ai(AiError::RateLimited).status_code(), 429);
+        assert_eq!(ProjectAssestsError::Ai(AiError::Timeout(30)).status_code(), 504);
+        assert_eq!(ProjectAssestsError::Job(JobError::AlreadyRunning("j".into())).status_code(), 409);
+        assert_eq!(ProjectAssestsError::Scanner(ScannerError::NotAuthorized("d".into())).status_code(), 403);
     }
 
     #[test]
     fn unknown_errors_default_to_500() {
-        let e = SpoliaError::Asset(AssetError::UnsupportedLanguage("brainfuck".into()));
+        let e = ProjectAssestsError::Asset(AssetError::UnsupportedLanguage("brainfuck".into()));
         assert_eq!(e.status_code(), 500);
     }
 
     #[test]
     fn error_body_carries_code_and_message() {
-        let e = SpoliaError::Ai(AiError::NotConfigured);
+        let e = ProjectAssestsError::Ai(AiError::NotConfigured);
         let body = ErrorBody::from_error(&e);
         assert_eq!(body.code, "llm_not_configured");
         assert!(body.recoverable);
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn non_recoverable_error_has_no_hint() {
-        let e = SpoliaError::Storage(StorageError::Migration("boom".into()));
+        let e = ProjectAssestsError::Storage(StorageError::Migration("boom".into()));
         let body = ErrorBody::from_error(&e);
         assert!(!body.recoverable);
         assert!(body.hint.is_none());
@@ -402,13 +402,13 @@ mod tests {
 
     #[test]
     fn sensitive_block_and_no_dirs_are_recoverable() {
-        assert!(SpoliaError::Config(ConfigError::NoScanDirs).is_recoverable_by_user());
-        assert!(!SpoliaError::Ai(AiError::SensitiveBlocked).is_recoverable_by_user());
+        assert!(ProjectAssestsError::Config(ConfigError::NoScanDirs).is_recoverable_by_user());
+        assert!(!ProjectAssestsError::Ai(AiError::SensitiveBlocked).is_recoverable_by_user());
     }
 
     #[test]
     fn messages_are_user_facing_chinese() {
-        let e = SpoliaError::Scanner(ScannerError::DirNotFound("D:/gone".into()));
+        let e = ProjectAssestsError::Scanner(ScannerError::DirNotFound("D:/gone".into()));
         let m = e.to_string();
         assert!(m.contains("目录不存在"), "{m}");
         assert!(!m.contains("panicked"));
@@ -416,8 +416,8 @@ mod tests {
 
     #[test]
     fn error_codes_are_stable_strings() {
-        assert_eq!(SpoliaError::NotFound("x".into()).code(), "not_found");
-        assert_eq!(SpoliaError::Search(SearchError::IndexNotReady).code(), "index_not_ready");
-        assert_eq!(SpoliaError::Scanner(ScannerError::Cancelled).code(), "cancelled");
+        assert_eq!(ProjectAssestsError::NotFound("x".into()).code(), "not_found");
+        assert_eq!(ProjectAssestsError::Search(SearchError::IndexNotReady).code(), "index_not_ready");
+        assert_eq!(ProjectAssestsError::Scanner(ScannerError::Cancelled).code(), "cancelled");
     }
 }

@@ -1,7 +1,7 @@
 //! 检索用例：查询参数解析 → 引擎检索 → 视图组装。
 //!
 //! # service 在这条链路上到底做了什么
-//! 检索算法（召回/评分/排序/摘要）全在 `spolia-search`，本模块**不碰**。
+//! 检索算法（召回/评分/排序/摘要）全在 `projectassests-search`，本模块**不碰**。
 //! 这里只负责三件引擎不该知道的事：
 //! 1. **把宽松的 HTTP query string 解析成严格的领域查询**——
 //!    拼错的 `scope=alll` 要给出"可选值"提示，而不是静默当成默认值
@@ -16,10 +16,10 @@
 //! 因此本模块对 status 做显式白名单校验。
 
 use serde::{Deserialize, Serialize};
-use spolia_domain::{
+use projectassests_domain::{
     AssetType, HitKind, ProjectStatus, SearchFilter, SearchQuery, SearchResult, SearchScope, SortBy,
 };
-use spolia_search::SearchEngine;
+use projectassests_search::SearchEngine;
 
 use crate::context::{ServiceContext, ServiceError};
 
@@ -238,7 +238,7 @@ fn view(result: &SearchResult, query: &SearchQuery) -> SearchView {
     }
 }
 
-fn hit_view(h: &spolia_domain::SearchHit) -> HitView {
+fn hit_view(h: &projectassests_domain::SearchHit) -> HitView {
     HitView {
         kind: h.kind.as_str().to_string(),
         kind_label: h.kind.label_zh().to_string(),
@@ -258,12 +258,12 @@ fn hit_view(h: &spolia_domain::SearchHit) -> HitView {
     }
 }
 
-fn source_label(s: &spolia_domain::MatchSource) -> String {
+fn source_label(s: &projectassests_domain::MatchSource) -> String {
     match s {
-        spolia_domain::MatchSource::Keyword => "关键词",
-        spolia_domain::MatchSource::Semantic => "语义",
-        spolia_domain::MatchSource::Structured => "筛选条件",
-        spolia_domain::MatchSource::NameMatch => "名称匹配",
+        projectassests_domain::MatchSource::Keyword => "关键词",
+        projectassests_domain::MatchSource::Semantic => "语义",
+        projectassests_domain::MatchSource::Structured => "筛选条件",
+        projectassests_domain::MatchSource::NameMatch => "名称匹配",
     }
     .to_string()
 }
@@ -276,7 +276,7 @@ fn source_label(s: &spolia_domain::MatchSource) -> String {
 /// 🔴 计数为 0 的类型也必须出现（值为 0）：只列非零项的话，
 /// 用户切到"资产" tab 后该 tab 就消失了，再也切不回来。
 /// 顺序取自 `HitKind::all()`，与 UI 的 tab 顺序同源。
-fn kind_counts(hits: &[spolia_domain::SearchHit]) -> Vec<KindCount> {
+fn kind_counts(hits: &[projectassests_domain::SearchHit]) -> Vec<KindCount> {
     HitKind::all()
         .iter()
         .map(|k| KindCount {
@@ -455,7 +455,7 @@ fn non_empty(s: &Option<String>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{
+    use projectassests_domain::{
         Asset, CodeStats, Evidence, Project, ProjectStatus as PS, ScanFacts,
     };
 
@@ -499,7 +499,7 @@ mod tests {
             generality: 0.7,
             stability: 0.6,
             tags: vec![],
-            created_at: spolia_storage::now_utc(),
+            created_at: projectassests_storage::now_utc(),
             evidence: Evidence {
                 files: vec![format!("src/{id}.rs")],
                 ..Evidence::default()

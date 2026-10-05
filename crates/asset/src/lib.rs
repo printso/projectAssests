@@ -1,4 +1,4 @@
-//! Spolia 资产引擎。
+//! projectAssests 资产引擎。
 //!
 //! 职责：把扫描器产出的真实文件，转化为带证据链的**资产**、**能力**与**关系**。
 //! 这是《技术设计书》§7 的 Engine 2（Asset Intelligence）与 Engine 3 的确定性部分。

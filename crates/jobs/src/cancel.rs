@@ -44,7 +44,7 @@ impl CancelToken {
 
     /// 底层原子标志的共享引用。
     ///
-    /// 存在的唯一理由：同步库（`spolia_scanner::Scanner::scan`）接收
+    /// 存在的唯一理由：同步库（`projectassests_scanner::Scanner::scan`）接收
     /// `&AtomicBool` 而非本类型。共享同一个 `Arc<AtomicBool>` 意味着
     /// 引擎置位取消后，扫描器的内层循环会立刻看到——
     /// 不需要"外层轮询标志再转发给内层"这种会引入取消延迟的中转。

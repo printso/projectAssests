@@ -15,7 +15,7 @@
 
 use std::collections::BTreeMap;
 
-use spolia_domain::{
+use projectassests_domain::{
     Asset, EvidenceItem, EvidenceKind, Insight, InsightType, ProjectStatus, UserFeedback,
 };
 
@@ -51,7 +51,7 @@ impl Default for DetectorConfig {
             forgotten_min_score: 0.70,
             direction_window_days: 180,
             direction_min_projects: 3,
-            confidence_floor: spolia_domain::CONFIDENCE_THRESHOLD,
+            confidence_floor: projectassests_domain::CONFIDENCE_THRESHOLD,
             max_per_detector: 10,
         }
     }
@@ -700,7 +700,7 @@ mod tests {
     use crate::input::tests::{asset, cap, implements, project};
     // 这些类型只在测试里构造 fixture 时需要，主代码通过 input 快照访问，
     // 因此放在测试模块导入而非文件顶部（避免"未使用导入"警告）。
-    use spolia_domain::{AssetType, CapabilityLayer, CodeStats, Evidence, Project};
+    use projectassests_domain::{AssetType, CapabilityLayer, CodeStats, Evidence, Project};
 
     fn now() -> chrono::DateTime<chrono::Utc> {
         chrono::DateTime::parse_from_rfc3339("2026-09-29T00:00:00Z")
@@ -1181,7 +1181,7 @@ mod tests {
         assert!(c.reusable_min_score > 0.5);
         assert!(c.forgotten_idle_days >= 90);
         assert!(c.max_per_detector > 0);
-        assert!((c.confidence_floor - spolia_domain::CONFIDENCE_THRESHOLD).abs() < f64::EPSILON);
+        assert!((c.confidence_floor - projectassests_domain::CONFIDENCE_THRESHOLD).abs() < f64::EPSILON);
     }
 
     /// 产出的每条洞察都必须能过领域层校验（这是入库前提）。
@@ -1201,7 +1201,7 @@ mod tests {
         assert!(!out.insights.is_empty());
         for i in &out.insights {
             assert!(i.validate().is_ok(), "{} 未通过校验", i.title);
-            assert!(i.confidence >= spolia_domain::CONFIDENCE_THRESHOLD);
+            assert!(i.confidence >= projectassests_domain::CONFIDENCE_THRESHOLD);
             assert!(!i.evidence.is_empty());
             // 每条证据的 label 不得为空（空 label 在前端渲染成空白行）
             for e in &i.evidence {
@@ -1230,7 +1230,7 @@ mod tests {
             tags: vec![],
             sensitive: false,
             stats: CodeStats::default(),
-            scan: spolia_domain::ScanFacts::default(),
+            scan: projectassests_domain::ScanFacts::default(),
             ai_profile: None,
         });
         input.assets.push(asset("a1", "p1", "X", AssetType::Code, 0.9));

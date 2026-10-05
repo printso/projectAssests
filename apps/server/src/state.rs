@@ -23,14 +23,14 @@
 
 use std::ops::Deref;
 
-use spolia_service::ServiceContext;
+use projectassests_service::ServiceContext;
 
 /// 应用状态：被 axum 以 `State<AppState>` 注入每个 handler。
 ///
 /// 廉价克隆（`ServiceContext` 内部全是 `Arc`），axum 每个请求 clone 一次成本可忽略。
 #[derive(Clone)]
 pub struct AppState {
-    /// 唯一的依赖容器。业务逻辑一律走 `spolia_service`，
+    /// 唯一的依赖容器。业务逻辑一律走 `projectassests_service`，
     /// handler 不直接使用 `ctx` 里的引擎做业务判断。
     pub ctx: ServiceContext,
 }
@@ -49,7 +49,7 @@ impl AppState {
     /// 🔴 僵尸任务收割由 `ServiceContext::open` 负责（不在这里重复做）：
     /// 上次进程被杀会留下 running 记录，不清理则 `has_active_of_type` 永久为真，
     /// 用户点"扫描"永远提示"已有任务在运行"，而界面上看不到那个任务。
-    pub fn open(db_path: impl AsRef<std::path::Path>) -> Result<Self, spolia_service::ServiceError> {
+    pub fn open(db_path: impl AsRef<std::path::Path>) -> Result<Self, projectassests_service::ServiceError> {
         Ok(Self {
             ctx: ServiceContext::open(db_path)?,
         })
@@ -62,7 +62,7 @@ impl AppState {
     /// 用户扫描完的项目会在重启后全部消失，而没有任何报错。
     /// 让编译器挡住这条路径，比写在注释里指望读者注意可靠得多。
     #[cfg(test)]
-    pub fn in_memory() -> Result<Self, spolia_service::ServiceError> {
+    pub fn in_memory() -> Result<Self, projectassests_service::ServiceError> {
         Ok(Self {
             ctx: ServiceContext::in_memory()?,
         })
@@ -100,7 +100,7 @@ mod tests {
     #[test]
     fn file_state_creates_database() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("spolia.db");
+        let path = dir.path().join("projectassests.db");
         let s = AppState::open(&path).unwrap();
         assert!(path.exists(), "数据库文件应被创建");
         assert_eq!(s.db_path, path.display().to_string());
@@ -113,18 +113,18 @@ mod tests {
     #[test]
     fn open_reaps_stale_jobs() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("spolia.db");
+        let path = dir.path().join("projectassests.db");
         {
             let s = AppState::open(&path).unwrap();
             s.db.jobs()
-                .create("scan_project-zombie", spolia_domain::JobType::ScanProject, None)
+                .create("scan_project-zombie", projectassests_domain::JobType::ScanProject, None)
                 .unwrap();
             let mut job = s.db.jobs().get("scan_project-zombie").unwrap().unwrap();
-            job.status = spolia_domain::JobStatus::Running;
+            job.status = projectassests_domain::JobStatus::Running;
             s.db.jobs().update(&job).unwrap();
             assert!(
                 s.db.jobs()
-                    .has_active_of_type(spolia_domain::JobType::ScanProject)
+                    .has_active_of_type(projectassests_domain::JobType::ScanProject)
                     .unwrap(),
                 "僵尸任务应处于活跃状态"
             );
@@ -134,7 +134,7 @@ mod tests {
         assert!(
             !s2.db
                 .jobs()
-                .has_active_of_type(spolia_domain::JobType::ScanProject)
+                .has_active_of_type(projectassests_domain::JobType::ScanProject)
                 .unwrap(),
             "重开后僵尸任务应已被收割"
         );

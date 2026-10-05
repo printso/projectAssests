@@ -5,7 +5,7 @@
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-use spolia_domain::{EntityKind, Relation, RelationType, StorageError};
+use projectassests_domain::{EntityKind, Relation, RelationType, StorageError};
 
 use crate::pool::Pool;
 use crate::row;

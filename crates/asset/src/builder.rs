@@ -12,7 +12,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use spolia_domain::{
+use projectassests_domain::{
     Asset, AssetType, Capability, EntityKind, Evidence, Relation, RelationType,
 };
 
@@ -23,7 +23,7 @@ use crate::symbols::{Symbol, SymbolKind};
 /// 构建资产所需的项目侧输入。
 #[derive(Debug, Clone)]
 pub struct ProjectInput<'a> {
-    /// 稳定项目 id（由路径派生，见 `spolia_scanner::project_id_from_path`）
+    /// 稳定项目 id（由路径派生，见 `projectassests_scanner::project_id_from_path`）
     pub project_id: &'a str,
     pub project_name: &'a str,
     /// 项目根绝对路径（用于把相对路径还原为可点击的绝对路径展示）
@@ -553,7 +553,7 @@ mod tests {
         let domains: Vec<_> = out
             .capabilities
             .iter()
-            .filter(|c| c.layer == spolia_domain::CapabilityLayer::Domain)
+            .filter(|c| c.layer == projectassests_domain::CapabilityLayer::Domain)
             .collect();
         assert_eq!(domains.len(), 5, "应始终有 5 个 Domain 根节点");
         assert!(out.assets.is_empty());
@@ -568,9 +568,9 @@ mod tests {
         let out = AssetBuilder::new().build(&input("p1", &[], &signals));
 
         // 三层都在
-        assert!(out.capabilities.iter().any(|c| c.layer == spolia_domain::CapabilityLayer::Domain));
-        assert!(out.capabilities.iter().any(|c| c.layer == spolia_domain::CapabilityLayer::Capability));
-        assert!(out.capabilities.iter().any(|c| c.layer == spolia_domain::CapabilityLayer::Implementation));
+        assert!(out.capabilities.iter().any(|c| c.layer == projectassests_domain::CapabilityLayer::Domain));
+        assert!(out.capabilities.iter().any(|c| c.layer == projectassests_domain::CapabilityLayer::Capability));
+        assert!(out.capabilities.iter().any(|c| c.layer == projectassests_domain::CapabilityLayer::Implementation));
 
         // project implements capability 关系
         let impls: Vec<_> = out

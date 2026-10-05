@@ -13,7 +13,7 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use spolia_domain::JobStatus;
+use projectassests_domain::JobStatus;
 use tokio::sync::watch;
 
 /// 进度事件（前端 SSE / Tauri event 的载荷）。
@@ -134,7 +134,7 @@ impl ProgressSubscription {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::JobType;
+    use projectassests_domain::JobType;
 
     fn event(progress: f64, status: JobStatus) -> ProgressEvent {
         ProgressEvent {

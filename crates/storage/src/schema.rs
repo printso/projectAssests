@@ -6,7 +6,7 @@
 //!
 //! 🔴 纪律（开源多人维护必备）：
 //! - 已发布的迁移**永不修改**，需要变更就追加新版本
-//! - 新增迁移必须同时在 `MIGRATIONS` 与 `spolia_domain::SCHEMA_VERSION` 递增
+//! - 新增迁移必须同时在 `MIGRATIONS` 与 `projectassests_domain::SCHEMA_VERSION` 递增
 //! - `lib.rs` 中有一致性测试强制检查这两者同步
 //!
 //! # FTS5 分词器选择
@@ -15,12 +15,12 @@
 //! trigram 按 3 字符滑窗切分，中文子串可命中。
 //!
 //! ⚠️ trigram 的已知限制：**查询串少于 3 字符时无法命中**（如"视频"2 字）。
-//! `spolia-search` 对此实现了 LIKE 子串回退，并把 `used_substring_fallback`
+//! `projectassests-search` 对此实现了 LIKE 子串回退，并把 `used_substring_fallback`
 //! 暴露给前端提示用户，避免"为什么搜不到/搜太多"的困惑。
 
 use rusqlite::Connection;
 
-use spolia_domain::StorageError;
+use projectassests_domain::StorageError;
 
 /// 迁移脚本：`(版本号, 说明, SQL)`。
 ///
@@ -563,9 +563,9 @@ mod tests {
         let c = mem();
         let out = migrate(&c).unwrap();
         assert_eq!(out.from, 0);
-        assert_eq!(out.to, spolia_domain::SCHEMA_VERSION);
+        assert_eq!(out.to, projectassests_domain::SCHEMA_VERSION);
         // 版本号必须连续：1, 2, …, SCHEMA_VERSION
-        let expected: Vec<i32> = (1..=spolia_domain::SCHEMA_VERSION).collect();
+        let expected: Vec<i32> = (1..=projectassests_domain::SCHEMA_VERSION).collect();
         assert_eq!(out.applied, expected);
         assert!(!out.is_noop());
     }
@@ -577,8 +577,8 @@ mod tests {
         migrate(&c).unwrap();
         let second = migrate(&c).unwrap();
         assert!(second.is_noop());
-        assert_eq!(second.from, spolia_domain::SCHEMA_VERSION);
-        assert_eq!(second.to, spolia_domain::SCHEMA_VERSION);
+        assert_eq!(second.from, projectassests_domain::SCHEMA_VERSION);
+        assert_eq!(second.to, projectassests_domain::SCHEMA_VERSION);
     }
 
     /// 🔴 回归：v1 老库升级到 v2 时，**存量洞察/机会必须被回填进 FTS 并可检索**。
@@ -596,7 +596,7 @@ mod tests {
     /// # 测试构造
     /// 1. 只应用 V1 → `user_version=1`，模拟已发布的 v1 库
     /// 2. 直接 INSERT 存量洞察/机会（含中文标题、tags、evidence、能力清单）
-    /// 3. `migrate()` → 只补 V2，触发回填
+    /// 3. `migrate()` → 补上所有更高版本（含 V2），触发回填
     /// 4. 断言 FTS 行数与主表一致，且能按中文子串真实检索到
     #[test]
     fn v2_backfills_existing_rows_from_v1_database() {
@@ -641,11 +641,18 @@ mod tests {
             1
         );
 
-        // 3. 升级到 v2：应只应用 V2，并回填
+        // 3. 升级到最新：应补上所有高于 v1 的版本（含本测试关心的 V2）
         let out = migrate(&c).unwrap();
         assert_eq!(out.from, 1);
-        assert_eq!(out.to, 2);
-        assert_eq!(out.applied, vec![2], "只应补 V2");
+        // 🔴 断言用 `SCHEMA_VERSION` 而非字面量 2：
+        // 写死"只到 v2"会让每次新增迁移都把这个测试弄坏，
+        // 而它真正关心的是"V2 的回填在真实升级路径上生效"，不是版本号。
+        assert_eq!(out.to, projectassests_domain::SCHEMA_VERSION);
+        assert!(
+            out.applied.contains(&2),
+            "从 v1 升级必须应用 V2（回填的载体），实际应用 {:?}",
+            out.applied
+        );
 
         // 4a. FTS 行数与主表一致（回填不漏不重）
         let ins_fts = c
@@ -695,6 +702,140 @@ mod tests {
             .query_row("SELECT count(*) FROM insights_fts", [], |r| r.get::<_, i64>(0))
             .unwrap();
         assert_eq!(ins_fts2, 1, "回填不幂等，产生了重复索引行");
+    }
+
+    /// V3：`audit_log` 的存量行必须**分类**回填，不能一律填成功。
+    ///
+    /// # 🔴 这个测试守住的是语义，不只是"列加上了"
+    /// v3 之前审计只在成功时写入，所以存量行分两类，回填规则相反：
+    /// - 模型调用行（`model` = `cloud:x` / `local:x`）→ `ok = 1`（它们必然成功过）
+    /// - 本地安全事件行（`model = '-'`）→ `ok = NULL`（不是调用，没有成败）
+    ///
+    /// 若图省事写成 `SET ok = 1`（无 WHERE），安全事件也会变成"成功"，
+    /// 于是 UI 在「用户关闭了敏感项目仅本地约束」旁显示绿色对勾——
+    /// 把一次**安全降级**渲染成"操作成功"。这是本迁移唯一的陷阱。
+    #[test]
+    fn v3_backfills_audit_ok_by_row_kind() {
+        let c = mem();
+        // 建到 v2（v3 之前），模拟一个已发布的老库
+        apply_one(&c, 1, V1).unwrap();
+        apply_one(&c, 2, V2).unwrap();
+        assert_eq!(current_version(&c).unwrap(), 2);
+
+        // 老库里的存量审计行：两类混在一起
+        // 1) 成功的模型调用（老代码只在成功时写，所以存量必然是成功的）
+        c.execute(
+            "INSERT INTO audit_log (at, model, route, job_type, summary, project_id)
+             VALUES ('2026-01-01','cloud:qwen-plus','cloud','ANALYZE_PROJECT','生成画像','p1')",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO audit_log (at, model, route, job_type, summary, project_id)
+             VALUES ('2026-01-02','local:qwen3:8b','local','ANALYZE_PROJECT','生成画像','p2')",
+            [],
+        )
+        .unwrap();
+        // 2) 本地安全事件（model = '-'）
+        c.execute(
+            "INSERT INTO audit_log (at, model, route, job_type, summary, project_id)
+             VALUES ('2026-01-03','-','local','SETTINGS','用户关闭了「敏感项目仅本地」约束',NULL)",
+            [],
+        )
+        .unwrap();
+
+        // 迁移到最新：应补上 V3
+        let out = migrate(&c).unwrap();
+        assert!(out.applied.contains(&3), "应应用 V3，实际 {:?}", out.applied);
+
+        // 🔴 模型调用行 → ok = 1
+        let cloud_ok: Option<i32> = c
+            .query_row(
+                "SELECT ok FROM audit_log WHERE model='cloud:qwen-plus'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(cloud_ok, Some(1), "存量的云端成功调用应回填为 ok=1");
+        let local_ok: Option<i32> = c
+            .query_row(
+                "SELECT ok FROM audit_log WHERE model='local:qwen3:8b'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(local_ok, Some(1), "存量的本地成功调用应回填为 ok=1");
+
+        // 🔴 安全事件行 → ok 必须仍是 NULL，绝不能被填成 1
+        let event_ok: Option<i32> = c
+            .query_row(
+                "SELECT ok FROM audit_log WHERE model='-'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            event_ok, None,
+            "🔴 安全事件不是模型调用，ok 必须保持 NULL，否则 UI 会给安全降级打绿勾"
+        );
+
+        // error 列全部为 NULL（老库没有失败记录，也不该凭空造原因）
+        let with_err: i64 = c
+            .query_row(
+                "SELECT count(*) FROM audit_log WHERE error IS NOT NULL",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(with_err, 0, "存量行不该有 error");
+
+        // 幂等：再 migrate 一次不得改动已回填的值
+        let again = migrate(&c).unwrap();
+        assert!(again.is_noop(), "V3 应幂等");
+    }
+
+    /// 🔴 `has_successful_llm_call` 必须只认 `ok = 1`。
+    ///
+    /// 首页引导第 4 步用它判定"模型可用过"。若它把失败记录（`ok = 0`）
+    /// 或安全事件（`ok IS NULL`）也算进去，一次 400 未开通的调用
+    /// 就会把该步标成"已完成"——而那恰恰证明模型不可用。
+    #[test]
+    fn has_successful_llm_call_ignores_failed_and_event_rows() {
+        use crate::Database;
+        let d = Database::in_memory().unwrap();
+        let s = d.settings();
+
+        // 起点：没有任何记录
+        assert!(!s.has_successful_llm_call().unwrap(), "空库应为 false");
+
+        // 只有失败记录 → 仍为 false
+        s.audit(&projectassests_domain::AuditEntry::llm_failed(
+            "2026-01-01", "cloud:bad", projectassests_domain::RouteTarget::Cloud,
+            "ANALYZE_PROJECT", "失败", None, "400",
+        )).unwrap();
+        assert!(
+            !s.has_successful_llm_call().unwrap(),
+            "🔴 只有失败记录时不得判定为'成功调用过'"
+        );
+
+        // 再加一条安全事件 → 仍为 false
+        s.audit(&projectassests_domain::AuditEntry::event(
+            "2026-01-02", "SETTINGS", "取消敏感标记", None,
+        )).unwrap();
+        assert!(
+            !s.has_successful_llm_call().unwrap(),
+            "安全事件不是模型调用，不得算成功"
+        );
+
+        // 出现一条成功记录 → 终于为 true
+        s.audit(&projectassests_domain::AuditEntry::llm_ok(
+            "2026-01-03", "cloud:good", projectassests_domain::RouteTarget::Cloud,
+            "ANALYZE_PROJECT", "成功", None,
+        )).unwrap();
+        assert!(
+            s.has_successful_llm_call().unwrap(),
+            "有成功记录后应判定为可用过"
+        );
     }
 
     /// 迁移语句本身也必须幂等（中断后重放安全）。
@@ -904,8 +1045,8 @@ mod tests {
         let max = MIGRATIONS.iter().map(|m| m.0).max().unwrap_or(0);
         assert_eq!(
             max,
-            spolia_domain::SCHEMA_VERSION,
-            "MIGRATIONS 最大版本必须等于 spolia_domain::SCHEMA_VERSION"
+            projectassests_domain::SCHEMA_VERSION,
+            "MIGRATIONS 最大版本必须等于 projectassests_domain::SCHEMA_VERSION"
         );
         // 版本号必须严格递增且从 1 开始
         for (i, m) in MIGRATIONS.iter().enumerate() {

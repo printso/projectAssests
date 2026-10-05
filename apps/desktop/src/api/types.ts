@@ -1,5 +1,5 @@
 /**
- * Spolia API 类型契约。
+ * projectAssests API 类型契约。
  *
  * 🔴 **本文件的每个类型都对应 `crates/service/src/*.rs` 里的一个 `pub struct`**，
  * 字段名与顺序按 Rust 侧 serde 的实际输出（snake_case）。
@@ -1136,6 +1136,16 @@ export interface AuditView {
   job_type: string;
   summary: string;
   project_id: string | null;
+  /**
+   * 模型调用成败。`null` = 本条不是模型调用（本地安全事件，如"取消敏感标记"）。
+   *
+   * 🔴 三态，不是布尔：`null` 时不得渲染任何成败标记。
+   * 给"用户关闭了敏感项目仅本地约束"打一个绿色对勾，
+   * 等于把一次安全降级说成"操作成功"。
+   */
+  ok: boolean | null;
+  /** 失败原因（仅 ok === false 时有值）。不含代码原文与 API Key。 */
+  error: string | null;
 }
 
 export interface ClearResult {

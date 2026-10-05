@@ -1,4 +1,4 @@
-//! Spolia 洞察与机会引擎（《技术设计书》§7 的 Engine 3：AI Reasoning）。
+//! projectAssests 洞察与机会引擎（《技术设计书》§7 的 Engine 3：AI Reasoning）。
 //!
 //! # 这是产品与普通"AI 项目搜索工具"拉开距离的地方
 //! 搜索回答"找到我写过的 OAuth"；洞察告诉你"你在 5 个项目中重复实现了 OAuth"。
@@ -38,7 +38,7 @@ pub use opportunities::{
 mod tests {
     use super::*;
     use input::tests::{asset, cap, implements, project};
-    use spolia_domain::{
+    use projectassests_domain::{
         AssetType, CapabilityLayer, EntityKind, Evidence, EvidenceItem, EvidenceKind,
         ProjectStatus, RelationType, UserFeedback,
     };
@@ -107,16 +107,16 @@ mod tests {
 
         assert!(!out.insights.is_empty());
         let types: Vec<_> = out.insights.iter().map(|i| i.insight_type).collect();
-        assert!(types.contains(&spolia_domain::InsightType::DuplicateCapability), "应有重复能力洞察: {types:?}");
-        assert!(types.contains(&spolia_domain::InsightType::ReusableComponent), "应有高复用洞察: {types:?}");
-        assert!(types.contains(&spolia_domain::InsightType::ForgottenAsset), "应有遗忘资产洞察: {types:?}");
+        assert!(types.contains(&projectassests_domain::InsightType::DuplicateCapability), "应有重复能力洞察: {types:?}");
+        assert!(types.contains(&projectassests_domain::InsightType::ReusableComponent), "应有高复用洞察: {types:?}");
+        assert!(types.contains(&projectassests_domain::InsightType::ForgottenAsset), "应有遗忘资产洞察: {types:?}");
 
         for i in &out.insights {
             assert!(i.validate().is_ok(), "{} 未通过校验", i.title);
             assert!(!i.evidence.is_empty());
-            assert!(i.confidence >= spolia_domain::CONFIDENCE_THRESHOLD);
+            assert!(i.confidence >= projectassests_domain::CONFIDENCE_THRESHOLD);
             // 事实类结论置信度应高于推断类
-            if i.insight_type == spolia_domain::InsightType::ForgottenAsset {
+            if i.insight_type == projectassests_domain::InsightType::ForgottenAsset {
                 assert!(i.confidence <= 0.85, "推断类洞察置信度上限 0.85: {}", i.confidence);
                 assert!(i.description.contains("推测"), "推断必须标明: {}", i.description);
             }
@@ -131,7 +131,7 @@ mod tests {
         let dup = out
             .insights
             .iter()
-            .find(|i| i.insight_type == spolia_domain::InsightType::DuplicateCapability)
+            .find(|i| i.insight_type == projectassests_domain::InsightType::DuplicateCapability)
             .expect("应发现 Task Queue 重复");
 
         assert!(dup.title.contains("Task Queue"));

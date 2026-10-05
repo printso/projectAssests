@@ -17,7 +17,7 @@
 //! 用户显式选择排序方式（复用价值/最近更新/置信度）时，
 //! 主排序键换成对应字段，相关性退为次键——**尊重用户意图优先于算法判断**。
 
-use spolia_domain::{Asset, Capability, Insight, Opportunity, Project, SortBy};
+use projectassests_domain::{Asset, Capability, Insight, Opportunity, Project, SortBy};
 
 /// 相关性权重。
 pub const W_RELEVANCE: f64 = 0.55;
@@ -95,7 +95,7 @@ pub fn project_quality(p: &Project) -> f64 {
     (health * 0.85 + scale).clamp(0.0, 1.0)
 }
 
-/// 资产质量分：直接采用复用评分（已由 spolia-asset 确定性计算）。
+/// 资产质量分：直接采用复用评分（已由 projectassests-asset 确定性计算）。
 pub fn asset_quality(a: &Asset) -> f64 {
     a.reuse_score.clamp(0.0, 1.0)
 }
@@ -248,7 +248,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{
+    use projectassests_domain::{
         AssetType, CapabilityLayer, CodeStats, Evidence, EvidenceItem, EvidenceKind, Insight,
         InsightType, Opportunity, OpportunityStatus, ProjectStatus, UserFeedback,
     };
@@ -276,7 +276,7 @@ mod tests {
                 modules: 2,
                 languages: vec![],
             },
-            scan: spolia_domain::ScanFacts::default(),
+            scan: projectassests_domain::ScanFacts::default(),
             ai_profile: None,
         }
     }

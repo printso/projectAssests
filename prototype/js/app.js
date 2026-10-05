@@ -63,7 +63,7 @@
   const ic = (n, cls) => '<svg class="ico ' + (cls || "") + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[n] || ICONS.doc) + "</svg>";
 
   /* ---------------- Global state ---------------- */
-  const LS_KEY = "spolia.theme";
+  const LS_KEY = "projectassests.theme";
   const state = {
     page: "overview",          // overview|projects|project|assets|graph|insights|analyst|mcp|opportunities|settings
     projectId: "p_yingtech",
@@ -660,7 +660,7 @@
       panel =
         '<section class="card"><div class="card-head"><div><div class="card-title">' + ic("db") + " 数据与隐私</div>" +
         '<div class="card-sub">Local-First: 全部数据存储在本机单文件 SQLite, 无账号、无云端同步、无遥测</div></div></div>' +
-        '<div class="form-row"><div class="form-label">数据库位置</div><div class="form-field"><input class="input mono" value="~/.spolia/index.db" readonly><div class="form-hint">单文件数据库, 复制即备份</div></div></div>' +
+        '<div class="form-row"><div class="form-label">数据库位置</div><div class="form-field"><input class="input mono" value="~/.projectassests/index.db" readonly><div class="form-hint">单文件数据库, 复制即备份</div></div></div>' +
         '<div class="form-row"><div class="form-label">当前占用</div><div class="form-field"><span class="mono" style="font-size:var(--fs-md)">214 MB</span> <span class="tag" style="margin-left:8px">128 项目 · 1,284 资产 · 42,318 向量</span></div></div>' +
         '<div class="form-row"><div class="form-label">网络访问审计<small>展示哪些数据、发送给了哪个模型、什么时候</small></div><div class="form-field"><button class="btn btn--ghost btn--sm" data-toast="原型演示: 打开审计日志">查看审计日志</button></div></div>' +
         '<div class="form-row"><div class="form-label">危险操作</div><div class="form-field" style="display:flex;gap:8px;flex-wrap:wrap">' +
@@ -827,7 +827,7 @@
       }, 900);
     });
     const ls = $("#llm-save");
-    if (ls) ls.addEventListener("click", () => toast("配置已保存到本机（~/.spolia/config）"));
+    if (ls) ls.addEventListener("click", () => toast("配置已保存到本机（~/.projectassests/config）"));
     const da = $("#dir-add");
     if (da) da.addEventListener("click", () => {
       const d = "E:/Projects";

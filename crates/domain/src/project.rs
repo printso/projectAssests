@@ -1,4 +1,4 @@
-//! 项目实体：Spolia 的**容器**对象。
+//! 项目实体：projectAssests 的**容器**对象。
 //!
 //! 产品判断 #1（《产品设计书》§1）：核心对象不是 Project 而是 Asset，
 //! 项目只是资产的容器。因此这里只保留"确定性可得"的画像字段，
@@ -81,7 +81,7 @@ pub struct Project {
     pub updated_at: Option<String>,
     pub last_commit_at: Option<String>,
     pub status: ProjectStatus,
-    /// 0-100，由确定性规则计算（见 `spolia-scanner`）
+    /// 0-100，由确定性规则计算（见 `projectassests-scanner`）
     pub health_score: u8,
     /// 0.0-1.0，完成度：仅有 Git 历史时可估算，否则 `None`
     pub completeness: Option<f64>,
@@ -202,7 +202,7 @@ pub struct CodeStats {
 /// 这些字段描述的是**项目本身的属性**（有没有 Git、有没有测试、提交数多少），
 /// 而不是"某张表怎么存"。放在 storage 会造成分层倒置：
 /// 扫描器产出的数据要先转成存储层的类型才能写库，
-/// 于是 `spolia-jobs` 的 pipeline 被迫依赖 `spolia-storage` 的领域概念。
+/// 于是 `projectassests-jobs` 的 pipeline 被迫依赖 `projectassests-storage` 的领域概念。
 ///
 /// # 为什么拆成两个结构体
 /// `ScanMeta` 曾把 Level 0 的 Git 事实与 Level 1 的符号统计捆在一起。

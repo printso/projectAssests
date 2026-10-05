@@ -9,10 +9,10 @@ window.MOCK = (function () {
   "use strict";
 
   /* ---- 品牌 (开源命名, 经 GitHub/npm/crates.io 查重后选定) ----
-     spolia: 古典建筑术语, 指从旧建筑上拆下、重新砌入新建筑的石材/构件。
+     projectassests: 古典建筑术语, 指从旧建筑上拆下、重新砌入新建筑的石材/构件。
      隐喻本产品核心: 把历史项目中沉淀的资产, 重新砌进下一个项目。 */
   const brand = {
-    name: "Spolia",
+    name: "projectAssests",
     sub: "Your Personal R&D OS",
     logo: "S",
     tagline: "让过去的每一个项目，都成为你未来的可能性"

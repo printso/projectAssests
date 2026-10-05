@@ -2,11 +2,11 @@
 //!
 //! 《技术设计书》§15：UI 不允许直接调 scan()/analyze()，一切走任务队列，
 //! 且所有任务可取消、进度可见。本模块负责任务的持久化与状态查询；
-//! 调度与并发控制在 `spolia-jobs`。
+//! 调度与并发控制在 `projectassests-jobs`。
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-use spolia_domain::{Job, JobStatus, JobType, StorageError};
+use projectassests_domain::{Job, JobStatus, JobType, StorageError};
 
 use crate::pool::Pool;
 use crate::row::{self, now_utc};

@@ -18,12 +18,12 @@
 //! 不在候选集里的引用直接剔除。
 
 use serde::{Deserialize, Serialize};
-use spolia_ai::{ChatMessage, CompletionRequest};
-use spolia_domain::{
+use projectassests_ai::{ChatMessage, CompletionRequest};
+use projectassests_domain::{
     AnalystAnswer, AnalystQuery, AnalystTurn, AnswerSource, AuditEntry, Citation, CitationKind,
     HitKind, HitLink, JobType, RouteTarget, SearchHit, SearchQuery, SearchScope,
 };
-use spolia_search::SearchEngine;
+use projectassests_search::SearchEngine;
 
 use crate::context::{ServiceContext, ServiceError};
 
@@ -38,14 +38,14 @@ pub const MAX_CONTEXT_HITS: usize = 12;
 pub const MAX_SNIPPET_CHARS: usize = 160;
 
 /// 对话历史最大轮数（与 domain 的 `MAX_HISTORY_TURNS` 一致）。
-pub const MAX_HISTORY_TURNS: usize = spolia_domain::MAX_HISTORY_TURNS;
+pub const MAX_HISTORY_TURNS: usize = projectassests_domain::MAX_HISTORY_TURNS;
 
 /// 系统提示词。
 ///
 /// 关键约束是"只能用给定的材料"，以及引用格式必须严格
 /// （否则解析不出来，等于没有证据链）。
 pub const SYSTEM_PROMPT: &str = "\
-你是 Spolia 的项目资产分析师。用户是熟悉编程的开发者，正在盘点自己的历史项目与可复用代码。
+你是 projectAssests 的项目资产分析师。用户是熟悉编程的开发者，正在盘点自己的历史项目与可复用代码。
 
 你会收到「检索到的真实数据」，这是从用户本地数据库检索出来的记录，每条带有 id、标题、来源路径与匹配理由。
 
@@ -264,15 +264,15 @@ fn run_context_search(
     query: &AnalystQuery,
     scope: SearchScope,
     _sensitive: bool,
-) -> Result<spolia_domain::SearchResult, ServiceError> {
+) -> Result<projectassests_domain::SearchResult, ServiceError> {
     let q = SearchQuery {
         q: query.normalized_question(),
         scope,
-        filter: spolia_domain::SearchFilter {
+        filter: projectassests_domain::SearchFilter {
             project_id: query.project_id.clone(),
             ..Default::default()
         },
-        sort: spolia_domain::SortBy::Relevance,
+        sort: projectassests_domain::SortBy::Relevance,
         limit: MAX_CONTEXT_HITS as u32,
         offset: 0,
     };
@@ -530,7 +530,7 @@ pub fn extract_citation_ids(text: &str) -> Vec<String> {
 
 /// 🔴 **不再在本 crate 维护映射**：唯一真相源是 `HitKind::citation_kind()`（domain）。
 ///
-/// 早先这里是 `_ => CitationKind::File` 兜底，与 `spolia-ai` 各抄一份。
+/// 早先这里是 `_ => CitationKind::File` 兜底，与 `projectassests-ai` 各抄一份。
 /// domain 加了 `Insight`/`Opportunity` 后，两处都把结论性实体静默吞成「文件」引用
 /// （标签 File、链接却跳洞察页），而通配符让编译器一声不吭。
 /// 转发壳保留本地调用点与测试写法不变。
@@ -542,7 +542,7 @@ fn citation_kind(kind: HitKind) -> CitationKind {
 fn no_material_response(
     ctx: &ServiceContext,
     query: &AnalystQuery,
-    search: &spolia_domain::SearchResult,
+    search: &projectassests_domain::SearchResult,
 ) -> AnalystResponse {
     let project_count = ctx.db.projects().count().unwrap_or(0);
     let content = if project_count == 0 {
@@ -584,11 +584,11 @@ fn no_material_response(
 fn fallback_response(
     ctx: &ServiceContext,
     query: &AnalystQuery,
-    search: &spolia_domain::SearchResult,
+    search: &projectassests_domain::SearchResult,
     model_error: Option<&str>,
 ) -> AnalystResponse {
     let project_count = ctx.db.projects().count().unwrap_or(0);
-    let fb_ctx = spolia_ai::FallbackContext {
+    let fb_ctx = projectassests_ai::FallbackContext {
         question: &query.normalized_question(),
         hits: &search.hits,
         total: search.total,
@@ -598,7 +598,7 @@ fn fallback_response(
         model_available: false,
         model_unavailable_reason: model_error,
     };
-    let answer = spolia_ai::deterministic_answer(&fb_ctx);
+    let answer = projectassests_ai::deterministic_answer(&fb_ctx);
 
     AnalystResponse {
         answer,
@@ -616,11 +616,11 @@ fn fallback_response(
 /// 审计日志长期留存，把用户输入与代码写进去等于存了一份明文副本。
 fn audit(
     ctx: &ServiceContext,
-    resolved: &spolia_ai::ResolvedModel,
+    resolved: &projectassests_ai::ResolvedModel,
     query: &AnalystQuery,
     context_size: usize,
     sensitive: bool,
-    outcome: Result<(), &spolia_domain::AiError>,
+    outcome: Result<(), &projectassests_domain::AiError>,
 ) {
     let q = query.normalized_question();
     let base = format!(
@@ -629,7 +629,7 @@ fn audit(
         q.chars().count(),
         context_size
     );
-    let at = spolia_storage::now_utc();
+    let at = projectassests_storage::now_utc();
     let job = JobType::AnalyzeProject.as_str().to_string();
     let project_id = query.project_id.clone();
 
@@ -669,14 +669,14 @@ fn truncate(s: &str, max_chars: usize) -> String {
     }
 }
 
-fn settings_of(ctx: &ServiceContext) -> Result<spolia_domain::Settings, ServiceError> {
+fn settings_of(ctx: &ServiceContext) -> Result<projectassests_domain::Settings, ServiceError> {
     Ok(ctx.db.settings().get_or_default()?)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{
+    use projectassests_domain::{
         Asset, AssetType, CodeStats, Evidence, Project, ProjectStatus, ScanFacts,
     };
 
@@ -760,7 +760,7 @@ mod tests {
             subtitle: "Python · FastAPI".into(),
             snippet: format!("{title} 的摘要，包含视频生成的关键实现细节与调用方式说明"),
             score: 0.8,
-            sources: vec![spolia_domain::MatchSource::Keyword],
+            sources: vec![projectassests_domain::MatchSource::Keyword],
             reasons: vec!["关键词命中".into()],
             link: HitLink {
                 page: "project".into(),
@@ -1140,7 +1140,7 @@ mod tests {
         // 1 条系统 + 最多 6 条历史 + 1 条当前
         assert!(msgs.len() <= 1 + MAX_HISTORY_TURNS + 1, "实际 {}", msgs.len());
         assert!(msgs.iter().all(|m| m.is_valid()), "空消息必须被丢弃");
-        assert_eq!(msgs[0].role, spolia_ai::Role::System);
+        assert_eq!(msgs[0].role, projectassests_ai::Role::System);
         assert_eq!(msgs.last().unwrap().content, "当前问题");
     }
 
@@ -1248,7 +1248,7 @@ mod tests {
         s.llm.cloud_base_url = "https://api.example.com/v1".into();
         s.llm.cloud_api_key = "sk-x".into();
         s.llm.cloud_model = "gpt-5-mini".into();
-        s.llm.route_fast = spolia_domain::RouteTarget::Cloud;
+        s.llm.route_fast = projectassests_domain::RouteTarget::Cloud;
         s.scan.level2_enabled = level2;
         c.db.settings().save_llm(&s.llm).unwrap();
         c.db.settings().save_scan(&s.scan).unwrap();
@@ -1317,6 +1317,53 @@ mod tests {
             !resp.answer.content.contains("AI 分析已在"),
             "开关打开时不得声称 AI 已关闭: {}",
             resp.answer.content
+        );
+    }
+
+    /// 🔴🔴 端到端守门员：`ask()` 走到 LLM 调用失败后，审计里必须有一条 `ok=false`。
+    ///
+    /// 与 profile.rs 的 `generate_writes_failed_audit_when_llm_call_fails` 对称。
+    /// # 为什么单元测试 `audit_failure_entry_marks_failed_and_leaks_nothing` 不够
+    /// 那条只证明"audit 函数被喂 Err 时写对了记录"。但本次缺陷的本质是
+    /// **`attempt_llm` 的 `Err` 分支压根没调用 audit**（旧代码只 `tracing::warn!`
+    /// 就降级了）。分析师这条路径尤其隐蔽：失败会**静默降级**成确定性回答，
+    /// 用户在界面上只看到"离线回答"，若审计也没这一条，那次云端出网就彻底无痕。
+    /// 必须从 `ask()` 入口走一遍才能证明失败分支接上了 audit。
+    #[test]
+    fn ask_writes_failed_audit_when_llm_call_fails() {
+        let c = seeded_with_cloud(true);
+        assert!(
+            c.db.settings().recent_audit(10).unwrap().is_empty(),
+            "前提：调用前审计应为空"
+        );
+
+        // api.example.com 不可达 → complete() 失败 → 降级成确定性回答，
+        // 但失败必须先写进审计
+        let resp = block_on(ask(
+            &c,
+            &AnalystRequest {
+                question: "视频".into(),
+                history: vec![],
+                project_id: None,
+                scope: SearchScope::All,
+            },
+        ))
+        .unwrap();
+        assert!(
+            resp.answer.is_deterministic(),
+            "调用失败应降级为确定性回答，实际 {:?}", resp.answer.generated_by
+        );
+
+        let logs = c.db.settings().recent_audit(10).unwrap();
+        assert_eq!(logs.len(), 1, "🔴 失败的模型调用必须在审计里留下恰好一条记录");
+        assert_eq!(logs[0].ok, Some(false), "必须标为失败");
+        assert!(
+            logs[0].error.as_ref().is_some_and(|e| !e.is_empty()),
+            "必须带失败原因，实际 {:?}", logs[0].error
+        );
+        assert!(
+            logs[0].summary.contains("失败"),
+            "摘要必须自带失败标记：{}", logs[0].summary
         );
     }
 
@@ -1450,7 +1497,7 @@ mod tests {
     #[test]
     fn audit_summary_is_truncated_and_has_no_code() {
         let c = ctx();
-        let resolved = spolia_ai::ResolvedModel {
+        let resolved = projectassests_ai::ResolvedModel {
             route: RouteTarget::Local,
             base_url: "http://127.0.0.1:11434".into(),
             model: "qwen3:8b".into(),
@@ -1464,7 +1511,7 @@ mod tests {
             project_id: Some("p1".into()),
             project_sensitive: false,
         };
-        audit(&c, &resolved, &q, 5, false);
+        audit(&c, &resolved, &q, 5, false, Ok(()));
 
         let entries = c.db.settings().recent_audit(10).unwrap();
         assert_eq!(entries.len(), 1);
@@ -1472,6 +1519,8 @@ mod tests {
         assert_eq!(e.model, "local:qwen3:8b");
         assert_eq!(e.route, RouteTarget::Local);
         assert_eq!(e.project_id.as_deref(), Some("p1"));
+        assert_eq!(e.ok, Some(true), "成功路径应记为 Some(true)");
+        assert_eq!(e.error, None, "成功时不该有错误原因");
         // 摘要必须被截断
         assert!(
             e.summary.chars().count() < 120,
@@ -1484,6 +1533,61 @@ mod tests {
             "审计不该存问题全文"
         );
         assert!(!e.summary.contains("sk-"), "不得含密钥");
+    }
+
+    /// 🔴 失败路径同样不得泄漏，且摘要必须自带失败标记。
+    ///
+    /// 失败条目新增了 `error` 字段——这是本改动引入的**新泄漏面**：
+    /// 它的内容来自 provider 的错误消息。必须确认
+    /// 用户的问题全文与密钥都不会顺着它进审计日志。
+    #[test]
+    fn audit_failure_entry_marks_failed_and_leaks_nothing() {
+        let c = ctx();
+        let resolved = projectassests_ai::ResolvedModel {
+            route: RouteTarget::Cloud,
+            base_url: "https://example.com/v1".into(),
+            model: "some-model".into(),
+            api_key: Some("sk-super-secret-key-12345".into()),
+            forced_local: false,
+        };
+        let long_question = "为什么我的视频生成管线总是失败".repeat(20);
+        let q = AnalystQuery {
+            question: long_question.clone(),
+            history: vec![],
+            project_id: Some("p1".into()),
+            project_sensitive: false,
+        };
+        let err = projectassests_domain::AiError::Provider(
+            "请求被拒绝 (400): The product is not activated".into(),
+        );
+        audit(&c, &resolved, &q, 5, false, Err(&err));
+
+        let entries = c.db.settings().recent_audit(10).unwrap();
+        assert_eq!(entries.len(), 1);
+        let e = &entries[0];
+        assert_eq!(e.ok, Some(false), "失败路径必须记为 Some(false)");
+        assert!(
+            e.error.as_deref().unwrap_or("").contains("not activated"),
+            "失败原因应写入，实际 {:?}", e.error
+        );
+        // 🔴 摘要必须自带失败标记：设置页列表以 summary 为主体，
+        // 导出成纯文本后更是只剩 summary——两种呈现下都要能看出这条是失败的。
+        assert!(
+            e.summary.contains("失败"),
+            "失败的摘要必须自带标记，实际 {:?}", e.summary
+        );
+        assert!(
+            !e.summary.contains(&long_question),
+            "审计不该存问题全文"
+        );
+        // 🔴 新泄漏面：error 字段不得带出密钥（reqwest 不会把 Authorization 头
+        // 写进错误消息，但这里显式守住，防止日后有人改成拼接头信息）
+        assert!(
+            !e.error.as_deref().unwrap_or("").contains("sk-"),
+            "🔴 错误原因里出现了密钥: {:?}", e.error
+        );
+        assert!(!e.summary.contains("sk-"), "摘要不得含密钥");
+        assert_eq!(e.model, "cloud:some-model", "审计只记 provider:model，不记密钥");
     }
 
     // ── 类型映射与工具函数 ───────────────────────────────────────

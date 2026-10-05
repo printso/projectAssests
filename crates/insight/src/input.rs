@@ -1,6 +1,6 @@
 //! 分析输入快照。
 //!
-//! # 为什么不直接依赖 `spolia-storage`
+//! # 为什么不直接依赖 `projectassests-storage`
 //! 洞察引擎需要读项目、资产、能力、关系四类数据。若直接依赖 storage，
 //! 每个检测器都得开数据库连接，单元测试要先建库造数据，
 //! 且"检测逻辑"与"SQL 查询"耦死——想换一种加载策略就得改检测器。
@@ -9,7 +9,7 @@
 //! 加载数据是上层（server / job）的职责。这样检测器可以被穷举单测，
 //! 也便于将来做"离线重算全部洞察"这类批处理。
 
-use spolia_domain::{Asset, AssetType, Capability, CapabilityLayer, Project, Relation};
+use projectassests_domain::{Asset, AssetType, Capability, CapabilityLayer, Project, Relation};
 
 /// 一轮洞察分析所需的全部输入。
 #[derive(Debug, Clone, Default)]
@@ -44,8 +44,8 @@ impl AnalysisInput {
             .iter()
             .filter(|r| {
                 r.source_id == project_id
-                    && r.relation_type == spolia_domain::RelationType::Implements
-                    && r.target_type == spolia_domain::EntityKind::Capability
+                    && r.relation_type == projectassests_domain::RelationType::Implements
+                    && r.target_type == projectassests_domain::EntityKind::Capability
             })
             .map(|r| r.target_id.clone())
             .collect()
@@ -57,8 +57,8 @@ impl AnalysisInput {
             .iter()
             .filter(|r| {
                 r.target_id == capability_id
-                    && r.relation_type == spolia_domain::RelationType::Implements
-                    && r.source_type == spolia_domain::EntityKind::Project
+                    && r.relation_type == projectassests_domain::RelationType::Implements
+                    && r.source_type == projectassests_domain::EntityKind::Project
             })
             .map(|r| r.source_id.clone())
             .collect()
@@ -88,14 +88,14 @@ impl AnalysisInput {
     }
 }
 
-// 日期解析与"距今天数"统一由 domain 层提供（`spolia_domain::{parse_date, days_since}`）。
+// 日期解析与"距今天数"统一由 domain 层提供（`projectassests_domain::{parse_date, days_since}`）。
 //
 // 🔴 本模块刻意**不转发**这些函数：早期这里有一份独立实现，与 domain 重复。
 // 两份实现意味着两处可能漂移的口径（例如一处把解析失败当 0 天、另一处当 None），
 // 而"距今多少天"同时决定项目状态、健康度、遗忘资产检测与搜索排序——
 // 口径不一致会让同一份数据在不同页面自相矛盾。
 // 同样不 `pub use` 转发：那会留下两条导入路径，漂移只是被推迟而非消除。
-// 需要日期能力时直接用 `spolia_domain::days_since`。
+// 需要日期能力时直接用 `projectassests_domain::days_since`。
 
 /// 项目的"闲置天数"：Git 提交时间与文件 mtime 取较近者。
 ///
@@ -106,14 +106,14 @@ impl AnalysisInput {
 /// 无任何时间信息时返回 `i64::MAX`（视为极久未更新），
 /// 这样"闲置 ≥ N 天"的判定成立，而"最近 N 天内"的判定不成立——
 /// 与检测器的两个用途都自洽。
-pub fn idle_days(p: &spolia_domain::Project, now: chrono::DateTime<chrono::Utc>) -> i64 {
+pub fn idle_days(p: &projectassests_domain::Project, now: chrono::DateTime<chrono::Utc>) -> i64 {
     p.days_since_update(now).unwrap_or(i64::MAX)
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use spolia_domain::{
+    use projectassests_domain::{
         CodeStats, EntityKind, Evidence, ProjectStatus, RelationType,
     };
 
@@ -134,7 +134,7 @@ pub(crate) mod tests {
             tags: vec![],
             sensitive: false,
             stats: CodeStats::default(),
-            scan: spolia_domain::ScanFacts::default(),
+            scan: projectassests_domain::ScanFacts::default(),
             ai_profile: None,
         }
     }

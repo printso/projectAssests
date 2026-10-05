@@ -5,7 +5,7 @@
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-use spolia_domain::{
+use projectassests_domain::{
     EvidenceItem, EvidenceKind, Insight, InsightType, StorageError, UserFeedback,
 };
 
@@ -407,7 +407,7 @@ pub(crate) fn map_insight(r: &rusqlite::Row<'_>) -> rusqlite::Result<Insight> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::CONFIDENCE_THRESHOLD;
+    use projectassests_domain::CONFIDENCE_THRESHOLD;
 
     fn db() -> Database {
         Database::in_memory().unwrap()

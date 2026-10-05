@@ -19,23 +19,23 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/spolia-dev/spolia"
-authors = ["Spolia Contributors"]
+repository = "https://github.com/projectassests/projectassests"
+authors = ["projectAssests Contributors"]
 
 # ── 依赖版本单一来源 ──────────────────────────────────────────────────────
 # 所有 crate 通过 workspace = true 引用，避免版本漂移。
 [workspace.dependencies]
 # 内部 crate
-spolia-domain   = { path = "crates/domain" }
-spolia-storage  = { path = "crates/storage" }
-spolia-scanner  = { path = "crates/scanner" }
-spolia-asset    = { path = "crates/asset" }
-spolia-insight  = { path = "crates/insight" }
-spolia-search   = { path = "crates/search" }
-spolia-jobs     = { path = "crates/jobs" }
-spolia-ai       = { path = "crates/ai" }
-spolia-mcp      = { path = "crates/mcp" }
-spolia-service  = { path = "crates/service" }
+projectassests-domain   = { path = "crates/domain" }
+projectassests-storage  = { path = "crates/storage" }
+projectassests-scanner  = { path = "crates/scanner" }
+projectassests-asset    = { path = "crates/asset" }
+projectassests-insight  = { path = "crates/insight" }
+projectassests-search   = { path = "crates/search" }
+projectassests-jobs     = { path = "crates/jobs" }
+projectassests-ai       = { path = "crates/ai" }
+projectassests-mcp      = { path = "crates/mcp" }
+projectassests-service  = { path = "crates/service" }
 
 # 序列化 / 错误
 serde       = { version = "1", features = ["derive"] }

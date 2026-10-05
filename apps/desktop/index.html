@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Spolia — Your Personal R&amp;D OS</title>
+    <title>projectAssests — Your Personal R&amp;D OS</title>
     <!--
       🔴 内联脚本只做一件事：在 React 挂载前应用缓存的主题，避免首屏闪烁。
 
@@ -18,7 +18,7 @@
     <script>
       (function () {
         try {
-          var t = localStorage.getItem("spolia.theme.cache");
+          var t = localStorage.getItem("projectassests.theme.cache");
           if (t === "light" || t === "dark") {
             document.documentElement.dataset.theme = t;
           }

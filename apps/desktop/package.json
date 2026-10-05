@@ -1,9 +1,9 @@
 {
-  "name": "spolia-desktop",
+  "name": "projectassests-desktop",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Spolia 桌面前端（React + Vite + TypeScript）。数据全部来自本地 Rust 服务，零静态模拟数据。",
+  "description": "projectAssests 桌面前端（React + Vite + TypeScript）。数据全部来自本地 Rust 服务，零静态模拟数据。",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

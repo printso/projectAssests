@@ -8,7 +8,7 @@
 //!
 //! 🔴 红线：**绝不给没有证据的资产高分**。
 //! `Evidence::is_sufficient()` 为 false 的资产在存储层就会被拒绝入库
-//! （见 `spolia-storage::AssetRepo::upsert_conn`），评分层也不应为它们背书。
+//! （见 `projectassests-storage::AssetRepo::upsert_conn`），评分层也不应为它们背书。
 
 use serde::{Deserialize, Serialize};
 

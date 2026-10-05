@@ -1,5 +1,5 @@
 /**
- * Spolia API 端点。
+ * projectAssests API 端点。
  *
  * 🔴 **每个函数对应 `apps/server/src/routes.rs` 里的一条路由**，
  * 路径、方法、参数位置（query / body / path）都按后端实际绑定写。

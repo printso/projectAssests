@@ -5,7 +5,7 @@
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-use spolia_domain::{Opportunity, OpportunityAnalysis, OpportunityStatus, StorageError};
+use projectassests_domain::{Opportunity, OpportunityAnalysis, OpportunityStatus, StorageError};
 
 use crate::err::sqlite_err;
 use crate::pool::Pool;
@@ -442,7 +442,7 @@ pub(crate) fn map_opportunity(r: &rusqlite::Row<'_>) -> rusqlite::Result<Opportu
 mod tests {
     use super::*;
     use crate::Database;
-    use spolia_domain::ReusableItem;
+    use projectassests_domain::ReusableItem;
 
     fn db() -> Database {
         Database::in_memory().unwrap()

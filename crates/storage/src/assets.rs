@@ -5,7 +5,7 @@
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-use spolia_domain::{Asset, AssetType, Evidence, ReuseTier, StorageError, UserFeedback};
+use projectassests_domain::{Asset, AssetType, Evidence, ReuseTier, StorageError, UserFeedback};
 
 use crate::err::sqlite_err;
 use crate::pool::Pool;
@@ -449,7 +449,7 @@ impl<'a> AssetRepo<'a> {
     /// FTS 检索：返回资产 id 与 bm25 分数（越小越相关）。
     ///
     /// ⚠️ trigram 分词器要求查询 ≥3 字符，2 字中文查询会返回空。
-    /// 调用方（`spolia-search`）负责 LIKE 回退。
+    /// 调用方（`projectassests-search`）负责 LIKE 回退。
     pub fn search_fts(&self, query: &str, limit: u32) -> Result<Vec<(String, f64)>, StorageError> {
         let conn = self.pool.get()?;
         let mut stmt = conn
@@ -658,7 +658,7 @@ pub(crate) fn map_asset(r: &rusqlite::Row<'_>) -> rusqlite::Result<Asset> {
 mod tests {
     use super::*;
     use crate::Database;
-    use spolia_domain::{CodeStats, Project};
+    use projectassests_domain::{CodeStats, Project};
 
     fn mk_project(d: &Database, id: &str, path: &str) {
         d.projects()
@@ -672,7 +672,7 @@ mod tests {
                 created_at: None,
                 updated_at: None,
                 last_commit_at: None,
-                status: spolia_domain::ProjectStatus::Active,
+                status: projectassests_domain::ProjectStatus::Active,
                 health_score: 80,
                 completeness: None,
                 tags: vec![],
@@ -684,7 +684,7 @@ mod tests {
                     modules: 2,
                     languages: vec![],
                 },
-                scan: spolia_domain::ScanFacts::default(),
+                scan: projectassests_domain::ScanFacts::default(),
                 ai_profile: None,
             })
             .unwrap();

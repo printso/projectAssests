@@ -1,13 +1,13 @@
-# Spolia Desktop（React + Vite + TypeScript）
+# projectAssests Desktop（React + Vite + TypeScript）
 
-Spolia 的桌面前端。数据全部来自本地 Rust 服务（`apps/server`），**零静态模拟数据**。
+projectAssests 的桌面前端。数据全部来自本地 Rust 服务（`apps/server`），**零静态模拟数据**。
 
 ## 启动
 
 ```bash
 # 1. 后端（另一个终端；需 MSVC 环境，见仓库根 scripts/msvc-env.sh）
 source scripts/msvc-env.sh
-cargo run -p spolia-server          # 默认监听 127.0.0.1:8787
+cargo run -p projectassests-server          # 默认监听 127.0.0.1:8787
 
 # 2. 前端
 cd apps/desktop
@@ -17,12 +17,12 @@ npm run dev                         # http://127.0.0.1:5174
 
 开发期前端通过 Vite proxy 把 `/api` 转发到后端（见 `vite.config.ts`），
 因此前端代码里只写相对路径 `/api/...`，无需按环境切换 baseURL。
-连非默认端口的后端：`SPOLIA_API=http://127.0.0.1:9000 npm run dev`。
+连非默认端口的后端：`PROJECTASSENTS_API=http://127.0.0.1:9000 npm run dev`。
 
 **端口是 5174 而非 Vite 默认的 5173**：5173 是本机另一个无关项目长期占用的端口。
 `strictPort: true` 是刻意的——端口被占时立即报错退出，而不是静默漂移到 5174、5175…
 （漂移会让人打开并"验证"到别人家的页面，那次踩坑见 `.workbuddy/memory/2026-10-02.md`）。
-需要换端口时用 `SPOLIA_PORT=5180 npm run dev`，不要改 `strictPort`。
+需要换端口时用 `PROJECTASSENTS_PORT=5180 npm run dev`，不要改 `strictPort`。
 
 后端未启动时，前端显示全屏启动引导（含启动命令），不会渲染一堆"加载失败"。
 

@@ -1,4 +1,4 @@
-//! Spolia 应用服务层。
+//! projectAssests 应用服务层。
 //!
 //! # 这一层为什么必须存在
 //! 产品同时有两种前端形态：浏览器（开发调试、开源贡献者验收）与
@@ -9,7 +9,7 @@
 //! 因此：
 //! ```text
 //! React UI ──HTTP──► axum adapter ─┐
-//!                                    ├──► spolia-service ──► 各引擎
+//!                                    ├──► projectassests-service ──► 各引擎
 //! React UI ──invoke─► Tauri IPC ────┘
 //! ```
 //! 适配器只做三件事：解析参数、调用 service、把 `Result` 映射成传输格式。
@@ -55,7 +55,7 @@ pub use assets::{
 };
 // 🔴 函数一律用 `as` 起模块前缀别名：assets / projects / jobs 三个模块
 // 都有 `list`、`detail`、`get` 这类同名用例。若直接重导出，
-// 调用方 `use spolia_service::*` 会撞上 E0652（ambiguous re-import），
+// 调用方 `use projectassests_service::*` 会撞上 E0652（ambiguous re-import），
 // 而报错信息只说"名字有歧义"，不告诉你是哪两个模块。
 pub use jobs::{
     active as active_jobs, activities as recent_activities, cancel as cancel_job,
@@ -65,7 +65,7 @@ pub use jobs::{
     SubmitResponse, MAX_LIST_LIMIT as MAX_JOB_LIST_LIMIT,
 };
 // `search::search` 与模块同名，重导出必须起别名：
-// `pub use search::search` 会让 `spolia_service::search` 既指模块又指函数，
+// `pub use search::search` 会让 `projectassests_service::search` 既指模块又指函数，
 // 调用方写 `search::search(...)` 时编译器无法判断哪个在前。
 pub use search::{
     search as run_search, AppliedFilters, HitView, KindCount, LinkView, SearchRequest, SearchView,

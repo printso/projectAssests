@@ -383,7 +383,7 @@ where
 }
 
 /// 取语言名的能力（让 `pick_primary_language` 同时适用于
-/// `LanguageStat` 与 `spolia_domain::LanguageShare` 两种结构）。
+/// `LanguageStat` 与 `projectassests_domain::LanguageShare` 两种结构）。
 pub trait HasLanguageName {
     fn language_name(&self) -> &str;
 }
@@ -394,7 +394,7 @@ impl HasLanguageName for LanguageStat {
     }
 }
 
-impl HasLanguageName for spolia_domain::LanguageShare {
+impl HasLanguageName for projectassests_domain::LanguageShare {
     fn language_name(&self) -> &str {
         &self.name
     }

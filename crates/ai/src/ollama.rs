@@ -13,7 +13,7 @@
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
-use spolia_domain::AiError;
+use projectassests_domain::AiError;
 
 use crate::provider::{
     timeout_for, CompletionRequest, CompletionResponse, LlmProvider, ProviderHealth,

@@ -317,7 +317,7 @@ export function ProjectDetailPage({ onChanged }: ProjectDetailPageProps) {
               将删除 <b>{p.name}</b> 在项目库中的记录，及其资产、能力、关联关系。
               <br />
               <br />
-              🔴 <b>磁盘上的代码文件不会被改动</b>——这只影响 Spolia 的索引。
+              🔴 <b>磁盘上的代码文件不会被改动</b>——这只影响 projectAssests 的索引。
               下次扫描该目录时项目会重新出现。
             </>
           }

@@ -1,6 +1,6 @@
 [package]
-name = "spolia-jobs"
-description = "Spolia 任务引擎：可取消任务队列、进度广播、任务持久化。"
+name = "projectassests-jobs"
+description = "projectAssests 任务引擎：可取消任务队列、进度广播、任务持久化。"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,13 +8,13 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-spolia-domain = { workspace = true }
-spolia-storage = { workspace = true }
+projectassests-domain = { workspace = true }
+projectassests-storage = { workspace = true }
 # pipeline 模块把三个引擎串成任务链：扫描 → 抽取 → 洞察。
 # 依赖方向是单向的（jobs 在最上层），不构成循环。
-spolia-scanner = { workspace = true }
-spolia-asset = { workspace = true }
-spolia-insight = { workspace = true }
+projectassests-scanner = { workspace = true }
+projectassests-asset = { workspace = true }
+projectassests-insight = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -28,5 +28,5 @@ async-trait = { workspace = true }
 tempfile = { workspace = true }
 
 [lib]
-name = "spolia_jobs"
+name = "projectassests_jobs"
 path = "src/lib.rs"

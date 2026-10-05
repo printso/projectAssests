@@ -11,7 +11,7 @@
 //!   不是 mock，足以支撑 reuse_score 评分与 Evidence 生成
 //!
 //! 🔑 关键设计：符号来源被抽象为 [`SymbolExtractor`] trait。
-//! 将来接 Tree-sitter 只需新增一个实现，`spolia-asset` 的评分/关系逻辑与
+//! 将来接 Tree-sitter 只需新增一个实现，`projectassests-asset` 的评分/关系逻辑与
 //! 上层 API **完全不用改**。这是"可替换"而非"永久将就"。
 //!
 //! # 诚实性纪律

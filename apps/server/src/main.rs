@@ -1,8 +1,8 @@
-//! Spolia 服务进程入口。
+//! projectAssests 服务进程入口。
 //!
 //! # 职责边界
 //! 这里只做三件事：初始化日志、打开数据库、绑定端口。
-//! 业务逻辑在 `spolia_service`，协议映射在 `routes.rs` / `error.rs`。
+//! 业务逻辑在 `projectassests_service`，协议映射在 `routes.rs` / `error.rs`。
 //!
 //! # 🔴 所有模块必须在此显式声明
 //! 早期版本只有 `fn main() {}`，`state.rs` 与 `error.rs` 从未被 `mod` 引入，
@@ -78,7 +78,7 @@ impl Cli {
 
 fn usage() -> String {
     format!(
-        "Spolia 本地服务进程\n\n用法: spolia-server [选项]\n\n选项:\n  --addr <host:port>  监听地址（默认 {DEFAULT_ADDR}）\n  --db <path>         数据库文件路径（默认放在用户数据目录）\n  -h, --help          显示此帮助"
+        "projectAssests 本地服务进程\n\n用法: projectassests-server [选项]\n\n选项:\n  --addr <host:port>  监听地址（默认 {DEFAULT_ADDR}）\n  --db <path>         数据库文件路径（默认放在用户数据目录）\n  -h, --help          显示此帮助"
     )
 }
 
@@ -96,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
         Ok(c) => c,
         Err(msg) => {
             // --help 走 stderr 但退出码 0；参数错误退出码非 0
-            let is_help = msg.starts_with("Spolia 本地服务进程");
+            let is_help = msg.starts_with("projectAssests 本地服务进程");
             if is_help {
                 println!("{msg}");
                 return Ok(());
@@ -135,7 +135,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(
         address = %bound,
         database = %db_path.display(),
-        "Spolia 服务已启动"
+        "projectAssests 服务已启动"
     );
     // 供父进程（Tauri / 开发脚本）解析
     println!("listening on http://{bound}");
@@ -144,7 +144,7 @@ async fn main() -> anyhow::Result<()> {
         .with_graceful_shutdown(shutdown_signal())
         .await?;
 
-    tracing::info!("Spolia 服务已停止");
+    tracing::info!("projectAssests 服务已停止");
     Ok(())
 }
 
@@ -160,11 +160,11 @@ async fn main() -> anyhow::Result<()> {
 fn default_db_path() -> anyhow::Result<PathBuf> {
     // Windows
     if let Some(v) = std::env::var_os("APPDATA").filter(|v| !v.is_empty()) {
-        return Ok(PathBuf::from(v).join("spolia").join("spolia.db"));
+        return Ok(PathBuf::from(v).join("projectassests").join("projectassests.db"));
     }
     // Linux XDG
     if let Some(v) = std::env::var_os("XDG_DATA_HOME").filter(|v| !v.is_empty()) {
-        return Ok(PathBuf::from(v).join("spolia").join("spolia.db"));
+        return Ok(PathBuf::from(v).join("projectassests").join("projectassests.db"));
     }
     // macOS 与 Linux 回退
     if let Some(v) = std::env::var_os("HOME").filter(|v| !v.is_empty()) {
@@ -173,7 +173,7 @@ fn default_db_path() -> anyhow::Result<PathBuf> {
         let base = home.join("Library").join("Application Support");
         #[cfg(not(target_os = "macos"))]
         let base = home.join(".local").join("share");
-        return Ok(base.join("spolia").join("spolia.db"));
+        return Ok(base.join("projectassests").join("projectassests.db"));
     }
     Err(anyhow::anyhow!(
         "无法确定用户数据目录（APPDATA / XDG_DATA_HOME / HOME 均未设置），请用 --db 显式指定"
@@ -221,7 +221,7 @@ mod tests {
 
     /// 把参数列表包成带 argv[0] 的迭代器。
     fn parse(args: &[&str]) -> Result<Cli, String> {
-        let owned = std::iter::once("spolia-server".to_string())
+        let owned = std::iter::once("projectassests-server".to_string())
             .chain(args.iter().map(|s| s.to_string()));
         Cli::parse_args(owned)
     }
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn help_exits_cleanly() {
         let msg = parse(&["--help"]).unwrap_err();
-        assert!(msg.starts_with("Spolia 本地服务进程"), "{msg}");
+        assert!(msg.starts_with("projectAssests 本地服务进程"), "{msg}");
         assert!(msg.contains("--addr"), "{msg}");
     }
 
@@ -285,8 +285,8 @@ mod tests {
         // 在无 HOME/APPDATA 的 CI 环境可能返回 Err，两种都可接受，但不能 panic
         match default_db_path() {
             Ok(p) => {
-                assert!(p.to_string_lossy().ends_with("spolia.db"), "{p:?}");
-                assert!(p.to_string_lossy().contains("spolia"), "{p:?}");
+                assert!(p.to_string_lossy().ends_with("projectassests.db"), "{p:?}");
+                assert!(p.to_string_lossy().contains("projectassests"), "{p:?}");
             }
             Err(e) => assert!(e.to_string().contains("--db"), "应提示用户显式指定: {e}"),
         }

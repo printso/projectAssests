@@ -6,7 +6,7 @@
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-use spolia_domain::{Capability, CapabilityLayer, StorageError};
+use projectassests_domain::{Capability, CapabilityLayer, StorageError};
 
 use crate::pool::Pool;
 use crate::row;
@@ -433,7 +433,7 @@ pub(crate) fn map_capability(r: &rusqlite::Row<'_>) -> rusqlite::Result<Capabili
 mod tests {
     use super::*;
     use crate::Database;
-    use spolia_domain::{EntityKind, Relation, RelationType};
+    use projectassests_domain::{EntityKind, Relation, RelationType};
 
     fn db() -> Database {
         Database::in_memory().unwrap()

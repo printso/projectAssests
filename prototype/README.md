@@ -1,7 +1,7 @@
-# Spolia 原型（prototype/）
+# projectAssests 原型（prototype/）
 
-> **Spolia** — Your Personal R&D OS。开源品牌名（古典建筑术语：从旧建筑拆下、重新砌入新建筑的石材/构件，隐喻"把历史项目的资产重新砌进下一个项目"）。
-> 命名查重记录：fallow / vestige / keepsake / loam / understory / palimpsest / colophon / rowen / resow / humus / remint 均已被同赛道或无关项目占用；`spolia` 裸名在 **npm 与 crates.io 均未被占用**（GitHub 仅存在同名个人账号，不影响仓库命名），故选定。
+> **projectAssests** — Your Personal R&D OS。开源品牌名（古典建筑术语：从旧建筑拆下、重新砌入新建筑的石材/构件，隐喻"把历史项目的资产重新砌进下一个项目"）。
+> 命名查重记录：fallow / vestige / keepsake / loam / understory / palimpsest / colophon / rowen / resow / humus / remint 均已被同赛道或无关项目占用；`projectassests` 裸名在 **npm 与 crates.io 均未被占用**（GitHub 仅存在同名个人账号，不影响仓库命名），故选定。
 > 独立原型目录，与业务代码完全隔离，**未修改任何现有文件**。
 > 打开方式：直接双击 `index.html`（file:// 可用，零依赖），或任意静态服务器托管。
 
@@ -76,7 +76,7 @@ prototype/
 
 ## 已定稿的决策（原 6 项不确定点，2026-09-28 由产品侧授权自决）
 
-1. **品牌名 = Spolia**。副标题沿用设计图 "Your Personal R&D OS"；文档体系中的 "Project Intelligence" 作为品类描述语保留（README/总纲中表述为"Spolia — 个人研发资产智能平台"）。命名查重与可用性结论见文首。
+1. **品牌名 = projectAssests**。副标题沿用设计图 "Your Personal R&D OS"；文档体系中的 "Project Intelligence" 作为品类描述语保留（README/总纲中表述为"projectAssests — 个人研发资产智能平台"）。命名查重与可用性结论见文首。
 2. **量级口径 = 设计稿数字**。侧栏计数与统计卡统一取自 `mock-data.js → scale`（128 / 1,284 / 312 / 7 / 8），列表 mock 为采样数据；接入真实接口后 `scale` 由聚合查询替换，UI 无需改动。
 3. **项目 Tab 定稿为 8 个**：删除"更多"；"代码结构"补正式内容（Level 0 统计 + 语言构成 + 目录树 + Project Archaeology 卡）；"相关项目"补 similar_to 项目卡。Tab 计数改为按该项目 mock 资产动态计算。
 4. **图谱分类色定为官方色板** `mock-data.js → kind_colors`：能力 #a855f7 / 项目 #22c55e / 代码 #3b82f6 / 知识 #eab308 / 经验 #06b6d4 / 关系 #64748b（边）。首页图例与图谱页共用此色板。

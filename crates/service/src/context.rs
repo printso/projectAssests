@@ -7,9 +7,9 @@
 
 use std::sync::Arc;
 
-use spolia_ai::{AiRouter, RouterConfig};
-use spolia_jobs::{build_default_handlers, JobEngine};
-use spolia_storage::Database;
+use projectassests_ai::{AiRouter, RouterConfig};
+use projectassests_jobs::{build_default_handlers, JobEngine};
+use projectassests_storage::Database;
 
 /// 服务上下文：所有 service 函数共享的依赖容器。
 ///
@@ -65,8 +65,8 @@ impl ServiceContext {
 
 /// 服务层统一错误。
 ///
-/// # 为什么不直接复用 `SpoliaError`
-/// `SpoliaError` 是领域/引擎层的错误，粒度细但不含"用户该怎么办"。
+/// # 为什么不直接复用 `ProjectAssestsError`
+/// `ProjectAssestsError` 是领域/引擎层的错误，粒度细但不含"用户该怎么办"。
 /// 服务层要面向 UI，因此每个变体都自带 `hint`——
 /// 适配器只管把它映射成 HTTP 状态码或 IPC 错误，不需要再判断语义。
 #[derive(Debug, thiserror::Error)]
@@ -89,23 +89,23 @@ pub enum ServiceError {
 
     /// 存储层故障
     #[error("数据库操作失败")]
-    Storage(#[from] spolia_domain::StorageError),
+    Storage(#[from] projectassests_domain::StorageError),
 
     /// 任务引擎故障
     #[error("{0}")]
-    Job(#[from] spolia_domain::JobError),
+    Job(#[from] projectassests_domain::JobError),
 
     /// AI 层故障
     #[error("{0}")]
-    Ai(#[from] spolia_domain::AiError),
+    Ai(#[from] projectassests_domain::AiError),
 
     /// 检索层故障
     #[error("{0}")]
-    Search(#[from] spolia_domain::SearchError),
+    Search(#[from] projectassests_domain::SearchError),
 
     /// 配置故障
     #[error("{0}")]
-    Config(#[from] spolia_domain::ConfigError),
+    Config(#[from] projectassests_domain::ConfigError),
 
     /// 内部错误（细节已记日志，不外泄）
     #[error("内部错误，详情请查看日志")]
@@ -123,10 +123,10 @@ impl ServiceError {
             Self::NotFound(_) => 404,
             Self::Precondition(_) => 424,
             Self::Conflict(_) => 409,
-            // StorageError 本身没有 status_code（那是 SpoliaError 的方法）；
+            // StorageError 本身没有 status_code（那是 ProjectAssestsError 的方法）；
             // 这里按变体映射：只有"库文件不可访问"是用户可自救的环境问题（503），
             // 其余（SQL 错误、迁移失败、序列化）都是程序缺陷 → 500。
-            Self::Storage(spolia_domain::StorageError::Unavailable { .. }) => 503,
+            Self::Storage(projectassests_domain::StorageError::Unavailable { .. }) => 503,
             // 🔴 写锁竞争 → 409，**必须排在下面的 `Storage(_) => 500` 之前**。
             //
             // 它不是服务端故障：后台索引正持有写锁时用户改设置，两个写入者
@@ -140,31 +140,31 @@ impl ServiceError {
             Self::Storage(e) if e.is_busy() => 409,
             Self::Storage(_) => 500,
             Self::Job(e) => match e {
-                spolia_domain::JobError::NotFound(_) => 404,
-                spolia_domain::JobError::AlreadyRunning(_)
-                | spolia_domain::JobError::AlreadyFinished(_) => 409,
-                spolia_domain::JobError::Execution(_) => 500,
+                projectassests_domain::JobError::NotFound(_) => 404,
+                projectassests_domain::JobError::AlreadyRunning(_)
+                | projectassests_domain::JobError::AlreadyFinished(_) => 409,
+                projectassests_domain::JobError::Execution(_) => 500,
             },
             Self::Ai(e) => match e {
-                spolia_domain::AiError::NotConfigured => 424,
+                projectassests_domain::AiError::NotConfigured => 424,
                 // AI 被用户主动关闭：与"未配置"同样是前置条件未满足，
                 // 不是服务端故障，因此绝不落到 5xx（否则会污染 error 日志）。
-                spolia_domain::AiError::Disabled => 424,
-                spolia_domain::AiError::Unauthorized => 401,
-                spolia_domain::AiError::RateLimited => 429,
-                spolia_domain::AiError::SensitiveBlocked => 403,
-                spolia_domain::AiError::Timeout(_) => 504,
-                spolia_domain::AiError::Cancelled => 499,
+                projectassests_domain::AiError::Disabled => 424,
+                projectassests_domain::AiError::Unauthorized => 401,
+                projectassests_domain::AiError::RateLimited => 429,
+                projectassests_domain::AiError::SensitiveBlocked => 403,
+                projectassests_domain::AiError::Timeout(_) => 504,
+                projectassests_domain::AiError::Cancelled => 499,
                 _ => 502,
             },
             // 索引未建立 = 用户还没扫描，是"前置条件未满足"而非服务端故障。
             // 🔴 早前这里统一返回 500：用户第一次打开应用就看到"内部错误"，
             // 而正确提示是"请先扫描"。500 还会被记进 error 日志，
             // 让真正需要关注的故障淹没在新用户的正常空库里。
-            Self::Search(spolia_domain::SearchError::IndexNotReady) => 424,
+            Self::Search(projectassests_domain::SearchError::IndexNotReady) => 424,
             Self::Search(_) => 500,
             Self::Config(e) => match e {
-                spolia_domain::ConfigError::NoScanDirs => 424,
+                projectassests_domain::ConfigError::NoScanDirs => 424,
                 _ => 400,
             },
             Self::Internal => 500,
@@ -181,7 +181,7 @@ impl ServiceError {
             // 库文件不可访问与"SQL 写错了"是两类完全不同的问题：
             // 前者用户能自救（检查磁盘/权限），后者是我们的缺陷。
             // 共用一个 code 的话，前端无法给出正确的引导文案。
-            Self::Storage(spolia_domain::StorageError::Unavailable { .. }) => {
+            Self::Storage(projectassests_domain::StorageError::Unavailable { .. }) => {
                 "storage_unavailable"
             }
             // 🔴 独立 code：前端据此决定是否自动重试（409 可重试，500 不该重试）。
@@ -189,24 +189,24 @@ impl ServiceError {
             // 只能把两者都当成"服务器坏了"处理。
             Self::Storage(e) if e.is_busy() => "storage_busy",
             Self::Storage(_) => "storage_error",
-            Self::Job(spolia_domain::JobError::NotFound(_)) => "job_not_found",
-            Self::Job(spolia_domain::JobError::AlreadyRunning(_)) => "job_already_running",
-            Self::Job(spolia_domain::JobError::AlreadyFinished(_)) => "job_already_finished",
+            Self::Job(projectassests_domain::JobError::NotFound(_)) => "job_not_found",
+            Self::Job(projectassests_domain::JobError::AlreadyRunning(_)) => "job_already_running",
+            Self::Job(projectassests_domain::JobError::AlreadyFinished(_)) => "job_already_finished",
             Self::Job(_) => "job_error",
-            Self::Ai(spolia_domain::AiError::NotConfigured) => "llm_not_configured",
+            Self::Ai(projectassests_domain::AiError::NotConfigured) => "llm_not_configured",
             // 🔴 必须有独立 code：下面的 `Self::Ai(_)` 通配符会把它吞进 "llm_error"，
             // 前端就无法区分"AI 被用户关了"（该引导去打开开关）与"模型真出错了"（该看日志）。
             // 这与 `citation_kind` 用 `_ => File` 吞掉新变体是同一类缺陷。
-            Self::Ai(spolia_domain::AiError::Disabled) => "llm_disabled",
-            Self::Ai(spolia_domain::AiError::Unauthorized) => "llm_unauthorized",
-            Self::Ai(spolia_domain::AiError::RateLimited) => "llm_rate_limited",
-            Self::Ai(spolia_domain::AiError::SensitiveBlocked) => "sensitive_blocked",
-            Self::Ai(spolia_domain::AiError::Timeout(_)) => "llm_timeout",
-            Self::Ai(spolia_domain::AiError::Cancelled) => "cancelled",
+            Self::Ai(projectassests_domain::AiError::Disabled) => "llm_disabled",
+            Self::Ai(projectassests_domain::AiError::Unauthorized) => "llm_unauthorized",
+            Self::Ai(projectassests_domain::AiError::RateLimited) => "llm_rate_limited",
+            Self::Ai(projectassests_domain::AiError::SensitiveBlocked) => "sensitive_blocked",
+            Self::Ai(projectassests_domain::AiError::Timeout(_)) => "llm_timeout",
+            Self::Ai(projectassests_domain::AiError::Cancelled) => "cancelled",
             Self::Ai(_) => "llm_error",
-            Self::Search(spolia_domain::SearchError::IndexNotReady) => "index_not_ready",
+            Self::Search(projectassests_domain::SearchError::IndexNotReady) => "index_not_ready",
             Self::Search(_) => "search_error",
-            Self::Config(spolia_domain::ConfigError::NoScanDirs) => "no_scan_dirs",
+            Self::Config(projectassests_domain::ConfigError::NoScanDirs) => "no_scan_dirs",
             Self::Config(_) => "config_error",
             Self::Internal => "internal_error",
         }
@@ -218,32 +218,32 @@ impl ServiceError {
     /// 不需要过度解释基础概念，但必须指明**去哪个界面**操作。
     pub fn hint(&self) -> Option<String> {
         Some(match self {
-            Self::Ai(spolia_domain::AiError::NotConfigured) => {
+            Self::Ai(projectassests_domain::AiError::NotConfigured) => {
                 "设置 → 大模型配置：启动 Ollama（`ollama serve` + `ollama pull qwen3:8b`），或填入云端 API Key".to_string()
             }
-            Self::Ai(spolia_domain::AiError::Disabled) => {
+            Self::Ai(projectassests_domain::AiError::Disabled) => {
                 "设置 → 扫描设置 → 打开「AI 分析」开关。\
 已生成的画像仍可正常查看，关闭只阻止新的模型调用（Local-First：代码不因误点而外发）"
                     .to_string()
             }
-            Self::Ai(spolia_domain::AiError::Unauthorized) => {
+            Self::Ai(projectassests_domain::AiError::Unauthorized) => {
                 "API Key 无效或已过期，请在 设置 → 大模型配置 更新".to_string()
             }
-            Self::Ai(spolia_domain::AiError::RateLimited) => {
+            Self::Ai(projectassests_domain::AiError::RateLimited) => {
                 "云端限流：稍后重试，或把路由切到本地模型（设置 → 大模型配置 → 路由）".to_string()
             }
-            Self::Ai(spolia_domain::AiError::Timeout(secs)) => {
+            Self::Ai(projectassests_domain::AiError::Timeout(secs)) => {
                 format!("模型 {secs}s 未响应。可换更快的模型，或降低 设置 中的输出长度")
             }
-            Self::Ai(spolia_domain::AiError::SensitiveBlocked) => {
+            Self::Ai(projectassests_domain::AiError::SensitiveBlocked) => {
                 "该项目标记为敏感，按 Local-First 不走云端。如需云端分析，先在项目详情取消敏感标记".to_string()
             }
-            Self::Config(spolia_domain::ConfigError::NoScanDirs) => {
+            Self::Config(projectassests_domain::ConfigError::NoScanDirs) => {
                 "设置 → 扫描目录：添加代码根目录（如 `F:/CodeProject`），然后点「开始扫描」".to_string()
             }
             // 索引未就绪与"没有扫描目录"指向同一个操作入口，
             // 但成因不同：前者可能是清过派生数据，所以措辞要覆盖"重新扫描"。
-            Self::Search(spolia_domain::SearchError::IndexNotReady) => {
+            Self::Search(projectassests_domain::SearchError::IndexNotReady) => {
                 "索引尚未建立：设置 → 扫描目录，执行一次扫描后即可检索".to_string()
             }
             // 🔴 任务类 hint 按**变体**给，不看消息文本。
@@ -251,16 +251,16 @@ impl ServiceError {
             // "已有同类任务在运行"——匹配不上，hint 静默变成 None，
             // 用户只看到"冲突"却不知道该做什么。靠子串匹配决定是否给建议
             // 本身就是反模式：文案一改就失效，且没有任何编译期保护。
-            Self::Job(spolia_domain::JobError::AlreadyRunning(_)) => {
+            Self::Job(projectassests_domain::JobError::AlreadyRunning(_)) => {
                 "任务正在运行：侧栏可查看进度，或取消后重试".to_string()
             }
-            Self::Job(spolia_domain::JobError::AlreadyFinished(_)) => {
+            Self::Job(projectassests_domain::JobError::AlreadyFinished(_)) => {
                 "任务已结束，无需重复操作；如需重跑请重新触发".to_string()
             }
             // 任务不存在：最常见的原因是前端持有过期数据
             // （任务记录被 purge_finished 清理，或页面开着时进程重启过）。
             // 没有这条 hint 时用户只看到"任务不存在"，会以为数据丢了。
-            Self::Job(spolia_domain::JobError::NotFound(_)) => {
+            Self::Job(projectassests_domain::JobError::NotFound(_)) => {
                 "任务可能已被清理：刷新任务列表后重试".to_string()
             }
             // Precondition 的三种来源（目录不存在 / 未授权 / 尚未扫描）
@@ -271,7 +271,7 @@ impl ServiceError {
             Self::Conflict(_) => {
                 "当前状态不允许该操作：可刷新页面后重试".to_string()
             }
-            Self::Storage(spolia_domain::StorageError::Unavailable { path, .. }) => {
+            Self::Storage(projectassests_domain::StorageError::Unavailable { path, .. }) => {
                 format!("数据库文件不可访问：{path}。检查磁盘空间与读写权限")
             }
             // 🔴 写锁竞争的 hint 必须说清**为什么**要等，而不只是"稍后重试"。
@@ -279,7 +279,7 @@ impl ServiceError {
             // 反复失败，最后认定产品坏了。告诉他"索引跑完就好"才是可操作的。
             Self::Storage(e) if e.is_busy() => {
                 "数据库正忙：后台任务（扫描/索引）正在写入。等侧栏进度完成后再试，\
-                 通常几秒内即可；反复失败请检查是否同时开着多个 Spolia 实例".to_string()
+                 通常几秒内即可；反复失败请检查是否同时开着多个 projectAssests 实例".to_string()
             }
             _ => return None,
         })
@@ -292,9 +292,9 @@ impl ServiceError {
     }
 }
 
-impl From<spolia_domain::SpoliaError> for ServiceError {
-    fn from(e: spolia_domain::SpoliaError) -> Self {
-        use spolia_domain::SpoliaError as E;
+impl From<projectassests_domain::ProjectAssestsError> for ServiceError {
+    fn from(e: projectassests_domain::ProjectAssestsError) -> Self {
+        use projectassests_domain::ProjectAssestsError as E;
         match e {
             E::Storage(s) => Self::Storage(s),
             E::Job(j) => Self::Job(j),
@@ -305,13 +305,13 @@ impl From<spolia_domain::SpoliaError> for ServiceError {
             E::BadRequest(m) => Self::Invalid(m),
             // 扫描器错误在服务层统一降级为 Precondition/Internal：
             // 目录不存在、未授权都属于"用户需要先准备好"，不是程序故障
-            E::Scanner(spolia_domain::ScannerError::DirNotFound(p)) => {
+            E::Scanner(projectassests_domain::ScannerError::DirNotFound(p)) => {
                 Self::Precondition(format!("目录不存在或已移动：{p}"))
             }
-            E::Scanner(spolia_domain::ScannerError::NotAuthorized(p)) => {
+            E::Scanner(projectassests_domain::ScannerError::NotAuthorized(p)) => {
                 Self::Precondition(format!("目录未授权：{p}"))
             }
-            E::Scanner(spolia_domain::ScannerError::NotADirectory(p)) => {
+            E::Scanner(projectassests_domain::ScannerError::NotADirectory(p)) => {
                 Self::Invalid(format!("不是目录：{p}"))
             }
             E::Scanner(_) => Self::Internal,
@@ -323,7 +323,7 @@ impl From<spolia_domain::SpoliaError> for ServiceError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{AiError, ConfigError, JobError, ScannerError, StorageError};
+    use projectassests_domain::{AiError, ConfigError, JobError, ScannerError, StorageError};
 
     #[test]
     fn in_memory_context_is_constructible() {
@@ -337,16 +337,16 @@ mod tests {
     #[test]
     fn file_context_creates_database_and_reaps() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("spolia.db");
+        let path = dir.path().join("projectassests.db");
         // 先造一条僵尸 running 任务
         {
             let ctx = ServiceContext::open(&path).unwrap();
             ctx.db
                 .jobs()
-                .create("scan_project-zombie", spolia_domain::JobType::ScanProject, None)
+                .create("scan_project-zombie", projectassests_domain::JobType::ScanProject, None)
                 .unwrap();
             let mut job = ctx.db.jobs().get("scan_project-zombie").unwrap().unwrap();
-            job.status = spolia_domain::JobStatus::Running;
+            job.status = projectassests_domain::JobStatus::Running;
             ctx.db.jobs().update(&job).unwrap();
         }
         // 重开：僵尸必须被收割，否则扫描功能永久不可用
@@ -354,7 +354,7 @@ mod tests {
         assert!(!ctx2
             .db
             .jobs()
-            .has_active_of_type(spolia_domain::JobType::ScanProject)
+            .has_active_of_type(projectassests_domain::JobType::ScanProject)
             .unwrap());
         assert_eq!(ctx2.db_path, path.display().to_string());
     }
@@ -409,7 +409,7 @@ mod tests {
             // 🔴 索引未就绪必须是 424 而非 500：新用户第一次打开应用就是空库，
             // 报"内部错误"既误导用户又污染 error 日志
             (
-                ServiceError::Search(spolia_domain::SearchError::IndexNotReady),
+                ServiceError::Search(projectassests_domain::SearchError::IndexNotReady),
                 424,
                 "index_not_ready",
             ),
@@ -545,11 +545,11 @@ mod tests {
     #[test]
     fn storage_unavailable_hint_includes_path() {
         let err = ServiceError::Storage(StorageError::Unavailable {
-            path: "C:/data/spolia.db".into(),
+            path: "C:/data/projectassests.db".into(),
             reason: "拒绝访问".into(),
         });
         assert_eq!(err.status_code(), 503);
-        assert!(err.hint().unwrap().contains("spolia.db"));
+        assert!(err.hint().unwrap().contains("projectassests.db"));
     }
 
     /// 内部错误不得泄漏底层细节。
@@ -560,12 +560,12 @@ mod tests {
         assert!(err.to_string().contains("日志"));
     }
 
-    // ── SpoliaError → ServiceError 转换 ──────────────────────────
+    // ── ProjectAssestsError → ServiceError 转换 ──────────────────────────
 
     #[test]
     fn scanner_dir_not_found_becomes_precondition() {
         // 目录不存在是"用户需要准备好"，不是程序故障 → 424 而非 500
-        let err = ServiceError::from(spolia_domain::SpoliaError::Scanner(
+        let err = ServiceError::from(projectassests_domain::ProjectAssestsError::Scanner(
             ScannerError::DirNotFound("/gone".into()),
         ));
         assert_eq!(err.status_code(), 424);
@@ -575,7 +575,7 @@ mod tests {
 
     #[test]
     fn scanner_not_a_directory_becomes_invalid() {
-        let err = ServiceError::from(spolia_domain::SpoliaError::Scanner(
+        let err = ServiceError::from(projectassests_domain::ProjectAssestsError::Scanner(
             ScannerError::NotADirectory("/a/file.txt".into()),
         ));
         assert_eq!(err.status_code(), 400);
@@ -585,20 +585,20 @@ mod tests {
     #[test]
     fn domain_errors_map_through() {
         assert_eq!(
-            ServiceError::from(spolia_domain::SpoliaError::NotFound("x".into())).code(),
+            ServiceError::from(projectassests_domain::ProjectAssestsError::NotFound("x".into())).code(),
             "not_found"
         );
         assert_eq!(
-            ServiceError::from(spolia_domain::SpoliaError::BadRequest("x".into())).code(),
+            ServiceError::from(projectassests_domain::ProjectAssestsError::BadRequest("x".into())).code(),
             "bad_request"
         );
         assert_eq!(
-            ServiceError::from(spolia_domain::SpoliaError::Ai(AiError::NotConfigured)).code(),
+            ServiceError::from(projectassests_domain::ProjectAssestsError::Ai(AiError::NotConfigured)).code(),
             "llm_not_configured"
         );
         // 引擎内部错误统一降级为 Internal，不透传细节
         assert_eq!(
-            ServiceError::from(spolia_domain::SpoliaError::Scanner(ScannerError::Cancelled)).code(),
+            ServiceError::from(projectassests_domain::ProjectAssestsError::Scanner(ScannerError::Cancelled)).code(),
             "internal_error"
         );
     }

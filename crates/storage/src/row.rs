@@ -6,7 +6,7 @@
 use rusqlite::Row;
 use serde::de::DeserializeOwned;
 
-use spolia_domain::StorageError;
+use projectassests_domain::StorageError;
 
 /// 读取 TEXT 列（非空）。
 pub fn text(row: &Row<'_>, idx: usize) -> rusqlite::Result<String> {

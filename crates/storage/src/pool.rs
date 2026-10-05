@@ -19,7 +19,7 @@ use std::sync::Mutex;
 
 use rusqlite::{Connection, OpenFlags};
 
-use spolia_domain::StorageError;
+use projectassests_domain::StorageError;
 
 /// 默认最大空闲连接数。单机单用户场景下 4 足够（HTTP 并发通常 ≤ 4）。
 const DEFAULT_MAX_IDLE: usize = 4;
@@ -106,7 +106,7 @@ impl Pool {
     pub fn in_memory() -> Result<Self, StorageError> {
         let seq = MEMORY_DB_SEQ.fetch_add(1, Ordering::Relaxed);
         // 唯一名 + 共享缓存：连接间共享同一库，且不与其它测试串扰
-        let source = format!("file:spolia_mem_{seq}?mode=memory&cache=shared");
+        let source = format!("file:projectassests_mem_{seq}?mode=memory&cache=shared");
         let keepalive = Self::connect(&source, true)?;
         Ok(Self {
             path: None,
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn open_creates_missing_parent_dir() {
         let dir = tempfile::tempdir().unwrap();
-        let nested = dir.path().join("a/b/c/spolia.db");
+        let nested = dir.path().join("a/b/c/projectassests.db");
         assert!(!nested.parent().unwrap().exists());
         let p = Pool::open(&nested).unwrap();
         assert!(nested.exists());

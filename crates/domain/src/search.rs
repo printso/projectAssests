@@ -350,7 +350,7 @@ impl HitKind {
     /// 检索命中类型 → 引用类型（对话式分析师用它给每条引用打标签）。
     ///
     /// # 🔴 这个映射的唯一真相源在这里，不在任何 crate 的私有 `citation_kind` 函数里
-    /// 早先 `spolia-ai` 与 `spolia-service` **各自**抄了一份 `citation_kind`，
+    /// 早先 `projectassests-ai` 与 `projectassests-service` **各自**抄了一份 `citation_kind`，
     /// 且都用 `_ => CitationKind::File` 兜底。domain 加了 `Insight`/`Opportunity` 后，
     /// 两处都把结论性实体静默吞成「文件」引用：标签显示 File、链接却跳洞察页，
     /// 自相矛盾，而通配符让编译器**一声不吭**。
@@ -459,7 +459,7 @@ mod tests {
 
     /// 🔴 锁定 `citation_kind` 的**全变体映射**，防止再被通配符吞掉。
     ///
-    /// 这个映射曾是 `spolia-ai` 与 `spolia-service` 各抄一份的重复真相源，
+    /// 这个映射曾是 `projectassests-ai` 与 `projectassests-service` 各抄一份的重复真相源，
     /// 两处都用 `_ => File` 兜底，导致新增的 `Insight`/`Opportunity`
     /// 被静默归成「文件」引用（标签 File、链接却跳洞察页）。
     /// 收敛到 domain 后，这条测试逐一钉死每个变体的归属：

@@ -6,8 +6,8 @@
 //!
 //! 用法：
 //! ```text
-//! cargo run -p spolia-scanner --example scan_real_dir -- "D:/Projects"
-//! cargo run -p spolia-scanner --example scan_real_dir -- . --no-git
+//! cargo run -p projectassests-scanner --example scan_real_dir -- "D:/Projects"
+//! cargo run -p projectassests-scanner --example scan_real_dir -- . --no-git
 //! ```
 //!
 //! 刻意只读：本工具不写数据库、不修改任何文件。
@@ -15,7 +15,7 @@
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 
-use spolia_scanner::{
+use projectassests_scanner::{
     project_id_from_path, to_domain_project, NoProgress, ScanConfig, Scanner,
 };
 
@@ -48,7 +48,7 @@ fn main() {
 
     let cancel = AtomicBool::new(false);
     // 说明：本 example 不提供取消入口（跑完即退出）。
-    // 产品中的取消由 Job Engine 驱动同一个 AtomicBool，见 spolia-jobs 与
+    // 产品中的取消由 Job Engine 驱动同一个 AtomicBool，见 projectassests-jobs 与
     // scan.rs 的 `cancellation_stops_scan` 测试。
 
     let started = std::time::Instant::now();

@@ -1,9 +1,9 @@
-//! Spolia 存储层：SQLite + FTS5 持久化。
+//! projectAssests 存储层：SQLite + FTS5 持久化。
 //!
 //! # 分层职责
 //! 本 crate 只做**持久化**：SQL、行映射、事务、迁移。
-//! 不含业务规则（健康度计算在 `spolia-scanner`，评分在 `spolia-asset`），
-//! 也不含 HTTP 概念（DTO 转换在 `spolia-server`）。
+//! 不含业务规则（健康度计算在 `projectassests-scanner`，评分在 `projectassests-asset`），
+//! 也不含 HTTP 概念（DTO 转换在 `projectassests-server`）。
 //!
 //! # Repository 约定
 //! - 每个聚合一个 Repository，构造函数接收 `&Pool`，自身无状态
@@ -54,9 +54,9 @@ pub use opportunities::{OpportunityFilter, OpportunityRepo};
 pub use pool::{Pool, PooledConnection};
 pub use projects::{ProjectFilter, ProjectRepo, ProjectSort};
 // `ScanFacts` / `SymbolStats` 定义在 domain（描述项目属性而非存储细节）。
-// 这里重导出，让 pipeline 与测试可以从 `spolia_storage::` 一并拿到写入所需类型，
+// 这里重导出，让 pipeline 与测试可以从 `projectassests_storage::` 一并拿到写入所需类型，
 // 而不必额外依赖 domain——调用方只跟存储层打交道即可。
-pub use spolia_domain::{ScanFacts, SymbolStats};
+pub use projectassests_domain::{ScanFacts, SymbolStats};
 pub use relations::RelationRepo;
 pub use row::{format_bytes, now_utc, parse_ts, relative_time, today_local};
 pub use schema::{
@@ -66,7 +66,7 @@ pub use settings_repo::SettingsRepo;
 
 use std::path::Path;
 
-use spolia_domain::{Settings, StorageError};
+use projectassests_domain::{Settings, StorageError};
 
 /// 数据库门面：持有连接池，提供全部 Repository 的构造入口。
 ///
@@ -363,7 +363,7 @@ impl ClearReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{
+    use projectassests_domain::{
         Asset, AssetType, AuditEntry, Evidence, Project, ProjectAiProfile, ProjectHighlight,
     };
 
@@ -382,23 +382,23 @@ mod tests {
             created_at: Some("2024-01-01".into()),
             updated_at: Some("2025-01-01".into()),
             last_commit_at: Some("2025-01-01".into()),
-            status: spolia_domain::ProjectStatus::Active,
+            status: projectassests_domain::ProjectStatus::Active,
             health_score: 80,
             completeness: Some(0.7),
             tags: vec!["Python".into(), "Demo".into()],
             sensitive: false,
-            stats: spolia_domain::CodeStats {
+            stats: projectassests_domain::CodeStats {
                 files: 42,
                 loc: 3000,
                 symbols: 12,
                 modules: 4,
-                languages: vec![spolia_domain::LanguageShare {
+                languages: vec![projectassests_domain::LanguageShare {
                     name: "Python".into(),
                     pct: 100,
                     loc: 3000,
                 }],
             },
-            scan: spolia_domain::ScanFacts::default(),
+            scan: projectassests_domain::ScanFacts::default(),
             ai_profile: None,
         }
     }
@@ -430,16 +430,16 @@ mod tests {
 
     #[test]
     fn in_memory_db_is_migrated() {
-        assert_eq!(db().version().unwrap(), spolia_domain::SCHEMA_VERSION);
+        assert_eq!(db().version().unwrap(), projectassests_domain::SCHEMA_VERSION);
     }
 
     #[test]
     fn file_db_is_created_and_migrated() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("spolia.db");
+        let path = dir.path().join("projectassests.db");
         {
             let d = Database::open(&path).unwrap();
-            assert_eq!(d.version().unwrap(), spolia_domain::SCHEMA_VERSION);
+            assert_eq!(d.version().unwrap(), projectassests_domain::SCHEMA_VERSION);
             assert!(path.exists());
         }
         assert!(path.exists(), "关闭连接后库文件应保留");
@@ -509,7 +509,7 @@ mod tests {
             .audit(&AuditEntry::llm_ok(
                 now_utc(),
                 "local:qwen3:8b",
-                spolia_domain::RouteTarget::Local,
+                projectassests_domain::RouteTarget::Local,
                 "ANALYZE_PROJECT",
                 "生成项目画像",
                 Some("p1".into()),
@@ -519,7 +519,7 @@ mod tests {
             .audit(&AuditEntry::llm_failed(
                 now_utc(),
                 "cloud:some-model",
-                spolia_domain::RouteTarget::Cloud,
+                projectassests_domain::RouteTarget::Cloud,
                 "ANALYZE_PROJECT",
                 "生成项目画像失败",
                 Some("p1".into()),
@@ -549,7 +549,7 @@ mod tests {
         assert_eq!(kept.description, "演示项目", "描述是用户手写数据，应保留");
         assert!(kept.ai_profile.is_none(), "AI 画像是派生数据，应被清空");
         assert_eq!(kept.language, "", "语言来自扫描，应被重置");
-        assert_eq!(kept.status, spolia_domain::ProjectStatus::Unknown);
+        assert_eq!(kept.status, projectassests_domain::ProjectStatus::Unknown);
 
         // 审计日志必须还在——三类条目一条都不能少，且字段完好
         let logs = d.settings().recent_audit(10).unwrap();

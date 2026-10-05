@@ -222,7 +222,7 @@ impl IntoResponse for ApiError {
 /// 语义集中在 `ServiceError`，两种传输都只是把它翻译成各自的格式。
 ///
 /// # 🔴 曾经存在的第二套映射（已删除）
-/// 本文件早期还有一个 `impl From<SpoliaError> for ApiError`，
+/// 本文件早期还有一个 `impl From<ProjectAssestsError> for ApiError`，
 /// 手写了完整的 code/hint 表。它与 `ServiceError` 的映射**平行且已经漂移**：
 /// `Scanner(DirNotFound)` 在那边是 404、在 service 层是 424；
 /// `Search(IndexNotReady)` 在这边有专属 code、在 service 层却落到通用 500。
@@ -231,8 +231,8 @@ impl IntoResponse for ApiError {
 /// 但它一直在误导读者——看到两份表的人会以为两份都生效，
 /// 于是改了一处、另一处继续错。已把其中更精确的部分
 /// （`index_not_ready` / `storage_unavailable`）上移到 `ServiceError`。
-impl From<spolia_service::ServiceError> for ApiError {
-    fn from(e: spolia_service::ServiceError) -> Self {
+impl From<projectassests_service::ServiceError> for ApiError {
+    fn from(e: projectassests_service::ServiceError) -> Self {
         let status = StatusCode::from_u16(e.status_code()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
         let code = e.code();
         let hint = e.hint();
@@ -441,12 +441,12 @@ mod tests {
     //! `ServiceError` → HTTP 的机械转换是否保真。
     //!
     //! "哪个错误该给哪个状态码 / 错误码 / hint" 属于语义映射，
-    //! 已在 `spolia-service/src/context.rs` 的测试里穷举覆盖。
+    //! 已在 `projectassests-service/src/context.rs` 的测试里穷举覆盖。
     //! 这里再测一遍只会产生两套断言——改了 service 层忘了改这里，
     //! 就会出现"测试红但行为对"或更糟的"测试绿但行为错"。
 
     use super::*;
-    use spolia_service::ServiceError;
+    use projectassests_service::ServiceError;
 
     // ── 信封形状 ────────────────────────────────────────────────
 
@@ -559,7 +559,7 @@ mod tests {
     /// 非标准状态码（499 = 客户端关闭请求）不得 panic。
     #[test]
     fn nonstandard_status_falls_back_safely() {
-        let err = ServiceError::Ai(spolia_domain::AiError::Cancelled);
+        let err = ServiceError::Ai(projectassests_domain::AiError::Cancelled);
         let expected = err.status_code();
         let api = ApiError::from(err);
         // StatusCode::from_u16 接受 100..=999，499 合法
@@ -576,14 +576,14 @@ mod tests {
         assert!(!ApiError::from(ServiceError::NotFound("x".into())).internal);
         assert!(!ApiError::from(ServiceError::Invalid("x".into())).internal);
         assert!(
-            !ApiError::from(ServiceError::Ai(spolia_domain::AiError::NotConfigured)).internal,
+            !ApiError::from(ServiceError::Ai(projectassests_domain::AiError::NotConfigured)).internal,
             "未配置模型是用户状态，不是服务端故障"
         );
         assert!(ApiError::from(ServiceError::Internal).internal);
         assert!(
             ApiError::from(ServiceError::Storage(
-                spolia_domain::StorageError::Unavailable {
-                    path: "C:/data/spolia.db".into(),
+                projectassests_domain::StorageError::Unavailable {
+                    path: "C:/data/projectassests.db".into(),
                     reason: "磁盘已满".into(),
                 }
             ))
@@ -596,13 +596,13 @@ mod tests {
     #[test]
     fn storage_unavailable_hint_reaches_the_client() {
         let api = ApiError::from(ServiceError::Storage(
-            spolia_domain::StorageError::Unavailable {
-                path: "C:/data/spolia.db".into(),
+            projectassests_domain::StorageError::Unavailable {
+                path: "C:/data/projectassests.db".into(),
                 reason: "拒绝访问".into(),
             },
         ));
         assert_eq!(api.code, "storage_unavailable");
-        assert!(api.hint.unwrap().contains("spolia.db"));
+        assert!(api.hint.unwrap().contains("projectassests.db"));
     }
 
     // ── internal 构造器（唯一允许在适配器里造错误的入口）─────────

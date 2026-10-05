@@ -1,6 +1,6 @@
 //! FTS5 / LIKE 检索原语。
 //!
-//! 本模块是存储层唯一构造检索 SQL 的地方。上层（`spolia-search`）
+//! 本模块是存储层唯一构造检索 SQL 的地方。上层（`projectassests-search`）
 //! 只拿到 `(id, score)` 候选集，**不接触任何 SQL**——这样换检索后端
 //! （例如未来接向量库）时，改动只发生在这里。
 //!
@@ -21,7 +21,7 @@
 
 use rusqlite::params;
 
-use spolia_domain::{Asset, Capability, Insight, Opportunity, Project, StorageError};
+use projectassests_domain::{Asset, Capability, Insight, Opportunity, Project, StorageError};
 
 use crate::assets;
 use crate::capabilities;
@@ -651,7 +651,7 @@ fn fetch_by_ids<T>(
 mod tests {
     use super::*;
     use crate::Database;
-    use spolia_domain::{AssetType, CapabilityLayer, CodeStats, Evidence, ProjectStatus};
+    use projectassests_domain::{AssetType, CapabilityLayer, CodeStats, Evidence, ProjectStatus};
 
     fn db() -> Database {
         Database::in_memory().unwrap()
@@ -674,7 +674,7 @@ mod tests {
             tags: vec!["video".into()],
             sensitive: false,
             stats: CodeStats::default(),
-            scan: spolia_domain::ScanFacts::default(),
+            scan: projectassests_domain::ScanFacts::default(),
             ai_profile: None,
         }
     }

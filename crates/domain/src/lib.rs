@@ -1,4 +1,4 @@
-//! Spolia 领域模型。
+//! projectAssests 领域模型。
 //!
 //! 本 crate 是**纯类型定义层**：只有数据结构与不变式，不含任何 IO（数据库 / 网络 / 文件系统）。
 //! 字段命名严格对齐《技术设计书》§11 的 SQLite schema（snake_case 通过 serde 显式声明），
@@ -54,7 +54,7 @@ pub const SCHEMA_VERSION: i32 = 3;
 
 /// 产品品牌元信息（单机版，无账号体系）。
 pub const BRAND: Brand = Brand {
-    name: "Spolia",
+    name: "projectAssests",
     sub: "Your Personal R&D OS",
     logo: "S",
     tagline: "让过去的每一个项目，都成为你未来的可能性",
@@ -76,13 +76,13 @@ mod tests {
     /// 保证 schema 常量与品牌信息不会被误改。
     ///
     /// 这里断言**确切**版本号而非范围：改动 schema 却忘记写迁移脚本时，
-    /// 这个测试会失败，强制开发者同时更新 `spolia-storage` 的迁移表。
+    /// 这个测试会失败，强制开发者同时更新 `projectassests-storage` 的迁移表。
     ///
     /// 🔴 新增迁移时必须把这里的数字一起改掉，并在下面的注释里补一行版本说明。
     /// 这是刻意的"双处修改"摩擦：它逼着提交者意识到自己在改数据库结构。
     #[test]
     fn brand_and_schema_are_stable() {
-        assert_eq!(BRAND.name, "Spolia");
+        assert_eq!(BRAND.name, "projectAssests");
         assert_eq!(BRAND.logo, "S");
         assert_eq!(SCHEMA_VERSION, 3);
     }

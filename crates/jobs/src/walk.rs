@@ -1,7 +1,7 @@
 //! 项目内源文件遍历（Level 1 符号抽取的输入）。
 //!
 //! # 为什么不复用扫描器的遍历
-//! `spolia_scanner` 的遍历目标是**统计**（数行数、判生成物、算语言构成），
+//! `projectassests_scanner` 的遍历目标是**统计**（数行数、判生成物、算语言构成），
 //! 它刻意不返回文件内容——Level 0 要快，不能把 9 万个文件读进内存。
 //! 本模块的目标相反：只对**值得抽取符号**的文件读内容，
 //! 且必须受严格的数量与体积上限约束。
@@ -11,7 +11,7 @@
 
 use std::path::{Path, PathBuf};
 
-use spolia_scanner::{is_always_excluded, language_of, path_contains_excluded, is_secret_file};
+use projectassests_scanner::{is_always_excluded, language_of, path_contains_excluded, is_secret_file};
 
 /// 单个文件的最大读取字节数。
 ///
@@ -368,7 +368,7 @@ mod tests {
     /// 不存在的路径不得 panic（项目可能被用户在扫描后删除）。
     #[test]
     fn missing_project_returns_empty() {
-        let (files, stats) = list_source_files(Path::new("/nonexistent-spolia-project"));
+        let (files, stats) = list_source_files(Path::new("/nonexistent-projectassests-project"));
         assert!(files.is_empty());
         assert_eq!(stats.listed, 0);
     }

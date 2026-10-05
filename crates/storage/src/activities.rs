@@ -5,7 +5,7 @@
 
 use rusqlite::{params, Connection};
 
-use spolia_domain::StorageError;
+use projectassests_domain::StorageError;
 
 use crate::pool::Pool;
 use crate::row::{self, now_utc};

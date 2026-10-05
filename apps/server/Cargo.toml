@@ -1,6 +1,6 @@
 [package]
-name = "spolia-server"
-description = "Spolia 服务进程：HTTP API + 静态资源托管 + MCP 端点。Tauri 与浏览器共用同一后端。"
+name = "projectassests-server"
+description = "projectAssests 服务进程：HTTP API + 静态资源托管 + MCP 端点。Tauri 与浏览器共用同一后端。"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,20 +8,20 @@ license.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "spolia-server"
+name = "projectassests-server"
 path = "src/main.rs"
 
 [dependencies]
-spolia-domain = { workspace = true }
-spolia-storage = { workspace = true }
-spolia-service = { workspace = true }
-spolia-scanner = { workspace = true }
-spolia-asset = { workspace = true }
-spolia-insight = { workspace = true }
-spolia-search = { workspace = true }
-spolia-jobs = { workspace = true }
-spolia-ai = { workspace = true }
-spolia-mcp = { workspace = true }
+projectassests-domain = { workspace = true }
+projectassests-storage = { workspace = true }
+projectassests-service = { workspace = true }
+projectassests-scanner = { workspace = true }
+projectassests-asset = { workspace = true }
+projectassests-insight = { workspace = true }
+projectassests-search = { workspace = true }
+projectassests-jobs = { workspace = true }
+projectassests-ai = { workspace = true }
+projectassests-mcp = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 tokio-stream = { workspace = true }

@@ -6,7 +6,7 @@
 //!
 //! 🔴 关键纪律：**重新分析不得覆盖用户反馈**。
 //! AI 的打分每轮都会变，但用户的判断是事实。存储层在 UPSERT 时
-//! 刻意把 `user_feedback` 排除在 UPDATE 列表之外（见 `spolia-storage::AssetRepo`）。
+//! 刻意把 `user_feedback` 排除在 UPDATE 列表之外（见 `projectassests-storage::AssetRepo`）。
 
 use serde::{Deserialize, Serialize};
 

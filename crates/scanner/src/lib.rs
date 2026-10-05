@@ -1,4 +1,4 @@
-//! Spolia 扫描器：把用户磁盘上的真实目录变成结构化项目画像。
+//! projectAssests 扫描器：把用户磁盘上的真实目录变成结构化项目画像。
 //!
 //! # 模块划分
 //! | 模块 | 职责 | 是否 IO |
@@ -15,7 +15,7 @@
 //! # Level 归属（《技术设计书》§14）
 //! 本 crate 覆盖 **Level 0（秒级，零 LLM）** 与 Level 1 的静态部分：
 //! 项目发现、语言统计、依赖解析、Git 历史、活跃度与健康度推断。
-//! 符号级 AST 解析（Level 1 的另一半）在 `spolia-asset`。
+//! 符号级 AST 解析（Level 1 的另一半）在 `projectassests-asset`。
 //!
 //! # 三条不可动摇的纪律
 //! 1. **不误报**：判定基于标记文件 / .git，不靠目录名猜测
@@ -92,7 +92,7 @@ mod tests {
         assert!(!GitInfo::unavailable("test").available);
         assert!(suggest_git_install(&GitInfo::unavailable("无法执行 git")).is_some());
         // 不存在的路径必须降级为不可用，绝不 panic
-        assert!(!GitAnalyzer::new().analyze(Path::new("/nonexistent-spolia")).available);
+        assert!(!GitAnalyzer::new().analyze(Path::new("/nonexistent-projectassests")).available);
         assert!(to_iso_date(std::time::SystemTime::UNIX_EPOCH).is_some());
 
         // scan

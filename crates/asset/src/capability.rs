@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use spolia_domain::{Capability, CapabilityLayer};
+use projectassests_domain::{Capability, CapabilityLayer};
 
 /// 一条能力规则的判定结果。
 #[derive(Debug, Clone)]

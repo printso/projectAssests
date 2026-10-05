@@ -1,8 +1,8 @@
-# Spolia
+# projectAssests
 
 > 让过去的每一个项目，都成为你未来的可能性。
 
-**Spolia**（古典建筑术语：从旧建筑拆下、重新砌入新建筑的石材构件）——一个**本地优先（Local-First）的个人研发资产引擎**。
+**projectAssests**（古典建筑术语：从旧建筑拆下、重新砌入新建筑的石材构件）——一个**本地优先（Local-First）的个人研发资产引擎**。
 
 它扫描你本机的代码项目，抽取其中的资产、能力与关系，做跨项目洞察，并用 LLM 帮你分析。所有数据默认只存在你本机的 SQLite 里——**没有账号体系、没有云端同步、不上传你的代码**。
 
@@ -20,7 +20,7 @@
 
 ## 🏗 架构
 
-Spolia 是一个 Cargo workspace，业务收敛在**传输无关的 `service` 层**，HTTP 只是其中一个适配器（未来也可接 Tauri IPC）。
+projectAssests 是一个 Cargo workspace，业务收敛在**传输无关的 `service` 层**，HTTP 只是其中一个适配器（未来也可接 Tauri IPC）。
 
 ```
 crates/
@@ -63,10 +63,10 @@ source scripts/msvc-env.sh
 ### 启动后端
 
 ```bash
-cargo run -p spolia-server          # 默认监听 127.0.0.1:8787
+cargo run -p projectassests-server          # 默认监听 127.0.0.1:8787
 ```
 
-可选参数：`--db <path>`（数据库路径，默认 `%APPDATA%/spolia/spolia.db`）、`--addr <host:port>`。
+可选参数：`--db <path>`（数据库路径，默认 `%APPDATA%/projectassests/projectassests.db`）、`--addr <host:port>`。
 
 ### 启动前端
 
@@ -96,13 +96,13 @@ npm run build
 
 ## ⚙️ 配置
 
-Spolia 的大部分行为通过桌面端的「设置」页完成，无需手改配置文件：
+projectAssests 的大部分行为通过桌面端的「设置」页完成，无需手改配置文件：
 
 - **扫描目录**：在设置页通过目录选择弹窗添加本机项目根目录（支持点选，无需手输绝对路径）。
 - **LLM 接入**：配置本地模型（如 Ollama）或兼容 OpenAI 的云端模型；API Key 明文存于本地数据库，请妥善保管本机数据。
 - **敏感项目**：将任意项目标记为 `sensitive`，该项目数据只走本地模型，绝不发往云端。
 
-核心产品原则：**默认本地、明确授权云端模型**——这是 Spolia 的信任基础。
+核心产品原则：**默认本地、明确授权云端模型**——这是 projectAssests 的信任基础。
 
 ## 📁 项目结构
 
@@ -121,7 +121,7 @@ Spolia 的大部分行为通过桌面端的「设置」页完成，无需手改�
 
 ## 🔒 隐私
 
-Spolia 是**本地优先**软件：扫描结果、索引、画像全部存于你本机的 SQLite 数据库。除非你显式配置并授权云端模型，否则你的代码与资产不会离开本机。`sensitive` 项目在授权后也只会使用本地模型。
+projectAssests 是**本地优先**软件：扫描结果、索引、画像全部存于你本机的 SQLite 数据库。除非你显式配置并授权云端模型，否则你的代码与资产不会离开本机。`sensitive` 项目在授权后也只会使用本地模型。
 
 ## 📄 许可证
 

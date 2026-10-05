@@ -12,11 +12,11 @@
 //! 路径分隔符/大小写可能与入库时不同，按原始串比对会静默失败。
 
 use serde::{Deserialize, Serialize};
-use spolia_domain::{
+use projectassests_domain::{
     AppearanceSettings, CloudProvider, LlmSettings, LocalBackend, RouteTarget, ScanSettings,
     Settings, Theme,
 };
-use spolia_storage::DbStats;
+use projectassests_storage::DbStats;
 
 use crate::context::{ServiceContext, ServiceError};
 
@@ -262,7 +262,7 @@ fn llm_view(llm: &LlmSettings) -> LlmView {
 }
 
 fn scan_view(scan: &ScanSettings) -> ScanView {
-    let problems = spolia_jobs::validate_settings(&Settings {
+    let problems = projectassests_jobs::validate_settings(&Settings {
         llm: LlmSettings::default(),
         scan: scan.clone(),
         appearance: AppearanceSettings::default(),
@@ -291,7 +291,7 @@ fn scan_view(scan: &ScanSettings) -> ScanView {
 fn db_view(ctx: &ServiceContext, stats: &DbStats) -> DbView {
     DbView {
         path: ctx.db_path.clone(),
-        size_display: spolia_storage::format_bytes(stats.size_bytes),
+        size_display: projectassests_storage::format_bytes(stats.size_bytes),
         size_bytes: stats.size_bytes,
         // schema 版本不在 DbStats 里，单独查（用于诊断"库结构是否过期"）
         schema_version: ctx.db.version().unwrap_or(0),
@@ -340,7 +340,7 @@ pub fn add_dir(ctx: &ServiceContext, req: &DirRequest) -> Result<ScanView, Servi
     }
 
     let mut scan = ctx.db.settings().get_or_default()?.scan;
-    let now = spolia_storage::now_utc();
+    let now = projectassests_storage::now_utc();
     if !scan.add_dir(path, &now) {
         // 已存在不算错误（幂等），但要告诉前端"没变化"
         return Err(ServiceError::Conflict(format!("该目录已在列表中：{path}")));
@@ -439,7 +439,7 @@ pub fn update_llm(ctx: &ServiceContext, req: &LlmUpdate) -> Result<LlmView, Serv
     if let Some(url) = &req.cloud_base_url {
         let url = url.trim();
         // 允许留空（表示未配置云端），但填了就必须是合法 http(s)
-        if !url.is_empty() && !spolia_domain::is_http_url(url) {
+        if !url.is_empty() && !projectassests_domain::is_http_url(url) {
             return Err(ServiceError::Invalid(format!(
                 "云端地址必须以 http:// 或 https:// 开头：{url}"
             )));
@@ -459,7 +459,7 @@ pub fn update_llm(ctx: &ServiceContext, req: &LlmUpdate) -> Result<LlmView, Serv
     }
     if let Some(url) = &req.local_base_url {
         let url = url.trim();
-        if !url.is_empty() && !spolia_domain::is_http_url(url) {
+        if !url.is_empty() && !projectassests_domain::is_http_url(url) {
             return Err(ServiceError::Invalid(format!(
                 "本地地址必须以 http:// 或 https:// 开头：{url}"
             )));
@@ -491,8 +491,8 @@ pub fn update_llm(ctx: &ServiceContext, req: &LlmUpdate) -> Result<LlmView, Serv
         // 🔴 `event()` 而非 `llm_ok()`：本地安全事件，不是模型调用。
         // 这条记录的存在意义恰恰是"用户主动降低了安全等级"，
         // 给它一个成功对勾会削弱甚至反转这个信号。
-        let _ = ctx.db.settings().audit(&spolia_domain::AuditEntry::event(
-            spolia_storage::now_utc(),
+        let _ = ctx.db.settings().audit(&projectassests_domain::AuditEntry::event(
+            projectassests_storage::now_utc(),
             "SETTINGS",
             "用户关闭了「敏感项目仅本地」约束",
             None,
@@ -572,6 +572,9 @@ pub async fn test_connection(
 // ══════════════════════════════════════════════════════════════════
 
 /// 审计日志视图。
+///
+/// 🔴 改这里的字段必须同步 `apps/desktop/src/api/types.ts` 的 `AuditView`：
+/// 那是本 DTO 的逐字段镜像，漏改会让类型检查全绿但前端运行时读到 `undefined`。
 #[derive(Debug, Clone, Serialize)]
 pub struct AuditView {
     pub at: String,
@@ -581,6 +584,15 @@ pub struct AuditView {
     pub job_type: String,
     pub summary: String,
     pub project_id: Option<String>,
+    /// 模型调用成败。`null` = 本条不是模型调用（本地安全事件）。
+    ///
+    /// 🔴 前端必须按三态渲染，不能当成布尔：
+    /// `null` 不显示任何成败标记——给「用户关闭了敏感项目仅本地约束」
+    /// 打一个绿色对勾，会把一次**安全降级**说成"操作成功"。
+    pub ok: Option<bool>,
+    /// 失败原因（仅 `ok = false` 时有值）。
+    /// 不含代码原文与 API Key（见 `AuditEntry::error` 的文档）。
+    pub error: Option<String>,
 }
 
 /// 读取审计日志（设置页「数据与隐私」）。
@@ -598,6 +610,8 @@ pub fn recent_audit(ctx: &ServiceContext, limit: u32) -> Result<Vec<AuditView>, 
             job_type: e.job_type,
             summary: e.summary,
             project_id: e.project_id,
+            ok: e.ok,
+            error: e.error,
         })
         .collect())
 }
@@ -642,7 +656,7 @@ pub fn clear_derived_data(ctx: &ServiceContext) -> Result<ClearResult, ServiceEr
     ]);
 
     let _ = ctx.db.activities().push(
-        spolia_storage::ActivityIcon::Alert,
+        projectassests_storage::ActivityIcon::Alert,
         "已清除派生数据",
         "项目清单、敏感标记、设置与审计日志均已保留；重新扫描即可重建索引",
     );
@@ -671,7 +685,7 @@ pub fn export_config(ctx: &ServiceContext) -> Result<Vec<(String, String)>, Serv
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spolia_domain::{Asset, AssetType, CodeStats, Evidence, Project, ProjectStatus, ScanFacts};
+    use projectassests_domain::{Asset, AssetType, CodeStats, Evidence, Project, ProjectStatus, ScanFacts};
 
     fn ctx() -> ServiceContext {
         ServiceContext::in_memory().unwrap()
@@ -769,7 +783,7 @@ mod tests {
         let err = add_dir(
             &c,
             &DirRequest {
-                path: "/nonexistent-spolia-dir".into(),
+                path: "/nonexistent-projectassests-dir".into(),
             },
         )
         .unwrap_err();
@@ -892,7 +906,7 @@ mod tests {
         let c = ctx();
         // 直接写库造一个已不存在的目录（绕过 add_dir 的存在性校验）
         let mut scan = c.db.settings().get_or_default().unwrap().scan;
-        scan.add_dir("/vanished-spolia-dir", "2026-09-29T00:00:00Z");
+        scan.add_dir("/vanished-projectassests-dir", "2026-09-29T00:00:00Z");
         c.db.settings().save_scan(&scan).unwrap();
 
         let view = load(&c).unwrap();
@@ -1255,20 +1269,63 @@ mod tests {
         let c = ctx();
         c.db
             .settings()
-            .audit(&spolia_domain::AuditEntry {
-                at: spolia_storage::now_utc(),
-                model: "local:qwen3:8b".into(),
-                route: RouteTarget::Local,
-                job_type: "ANALYZE_PROJECT".into(),
-                summary: "生成项目画像".into(),
-                project_id: Some("p1".into()),
-            })
+            .audit(&projectassests_domain::AuditEntry::llm_ok(
+                projectassests_storage::now_utc(),
+                "local:qwen3:8b",
+                RouteTarget::Local,
+                "ANALYZE_PROJECT",
+                "生成项目画像",
+                Some("p1".into()),
+            ))
             .unwrap();
         let v = recent_audit(&c, 10).unwrap();
         assert_eq!(v.len(), 1);
         assert_eq!(v[0].route_label, "本地模型");
         assert_eq!(v[0].model, "local:qwen3:8b");
         assert_eq!(v[0].project_id.as_deref(), Some("p1"));
+        assert_eq!(v[0].ok, Some(true));
+        assert_eq!(v[0].error, None);
+    }
+
+    /// 🔴 三类条目的视图字段必须各自正确，前端要靠它们区分渲染。
+    #[test]
+    fn audit_view_exposes_tristate_ok() {
+        let c = ctx();
+        c.db
+            .settings()
+            .audit(&projectassests_domain::AuditEntry::llm_failed(
+                projectassests_storage::now_utc(),
+                "cloud:bad-model",
+                RouteTarget::Cloud,
+                "ANALYZE_PROJECT",
+                "生成项目画像（失败）",
+                Some("p1".into()),
+                "请求被拒绝 (400): The product is not activated",
+            ))
+            .unwrap();
+        c.db
+            .settings()
+            .audit(&projectassests_domain::AuditEntry::event(
+                projectassests_storage::now_utc(),
+                "SETTINGS",
+                "用户关闭了「敏感项目仅本地」约束",
+                None,
+            ))
+            .unwrap();
+
+        let v = recent_audit(&c, 10).unwrap();
+        assert_eq!(v.len(), 2);
+        // 倒序：后写入的事件在前
+        let event = v.iter().find(|e| e.model == "-").expect("应有安全事件");
+        assert_eq!(event.ok, None, "安全事件的 ok 必须是 None，前端据此不渲染成败标记");
+        assert_eq!(event.error, None);
+        let failed = v.iter().find(|e| e.model == "cloud:bad-model").expect("应有失败调用");
+        assert_eq!(failed.ok, Some(false));
+        assert_eq!(
+            failed.error.as_deref(),
+            Some("请求被拒绝 (400): The product is not activated"),
+            "失败原因必须透传到视图层"
+        );
     }
 
     #[test]
@@ -1320,14 +1377,27 @@ mod tests {
             })
             .unwrap();
         c.db.settings()
-            .audit(&spolia_domain::AuditEntry {
-                at: spolia_storage::now_utc(),
-                model: "local:qwen3:8b".into(),
-                route: spolia_domain::RouteTarget::Local,
-                job_type: "ANALYZE_PROJECT".into(),
-                summary: "生成项目画像".into(),
-                project_id: Some("p1".into()),
-            })
+            .audit(&projectassests_domain::AuditEntry::llm_ok(
+                projectassests_storage::now_utc(),
+                "local:qwen3:8b",
+                projectassests_domain::RouteTarget::Local,
+                "ANALYZE_PROJECT",
+                "生成项目画像",
+                Some("p1".into()),
+            ))
+            .unwrap();
+        // 🔴 失败记录也要写一条：它是"数据曾出网"的唯一凭证，
+        // 「审计不可被普通操作抹掉」这条契约对它同样必须成立。
+        c.db.settings()
+            .audit(&projectassests_domain::AuditEntry::llm_failed(
+                projectassests_storage::now_utc(),
+                "cloud:bad-model",
+                projectassests_domain::RouteTarget::Cloud,
+                "ANALYZE_PROJECT",
+                "生成项目画像（失败）",
+                Some("p1".into()),
+                "请求被拒绝 (400)",
+            ))
             .unwrap();
 
         let result = clear_derived_data(&c).unwrap();
@@ -1358,8 +1428,19 @@ mod tests {
         assert!(kept.sensitive, "敏感标记丢失会让敏感项目被送去云端模型");
         assert_eq!(kept.description, "内部风控系统", "用户手写描述应保留");
 
-        // 审计日志必须还在
-        assert_eq!(recent_audit(&c, 10).unwrap().len(), 1, "审计日志不得被清除");
+        // 审计日志必须还在——🔴 成功与失败两类都要在。
+        // 失败记录是"那次数据确实出过网"的唯一凭证，
+        // 清理派生数据把它一起抹掉，等于销毁审计证据。
+        let kept_audit = recent_audit(&c, 10).unwrap();
+        assert_eq!(kept_audit.len(), 2, "审计日志不得被清除");
+        assert!(
+            kept_audit.iter().any(|e| e.ok == Some(true)),
+            "成功调用记录应存活"
+        );
+        assert!(
+            kept_audit.iter().any(|e| e.ok == Some(false) && e.error.is_some()),
+            "🔴 失败调用记录（含原因）必须存活"
+        );
 
         // preserved 必须如实列出保留项（前端确认弹窗直接展示它）
         let joined = result.preserved.join(" ");

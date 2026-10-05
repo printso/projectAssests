@@ -1,11 +1,11 @@
 //! 项目 Repository。
 //!
 //! 职责边界：只负责 projects 表的读写与 FTS 同步。
-//! 健康度/状态的计算规则在 `spolia-scanner`（业务规则不进存储层）。
+//! 健康度/状态的计算规则在 `projectassests-scanner`（业务规则不进存储层）。
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-use spolia_domain::{
+use projectassests_domain::{
     CodeStats, LanguageShare, Project, ProjectAiProfile, ProjectStatus, ScanFacts, StorageError,
     SymbolStats,
 };
@@ -537,7 +537,7 @@ pub(crate) fn map_project(r: &rusqlite::Row<'_>) -> rusqlite::Result<Project> {
 mod tests {
     use super::*;
     use crate::Database;
-    use spolia_domain::ProjectHighlight;
+    use projectassests_domain::ProjectHighlight;
 
     fn sample(id: &str, name: &str, path: &str) -> Project {
         Project {
@@ -562,7 +562,7 @@ mod tests {
                 modules: 4,
                 languages: vec![LanguageShare { name: "Python".into(), pct: 100, loc: 3000 }],
             },
-            scan: spolia_domain::ScanFacts::default(),
+            scan: projectassests_domain::ScanFacts::default(),
             ai_profile: None,
         }
     }

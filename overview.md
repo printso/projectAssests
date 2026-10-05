@@ -1,6 +1,6 @@
-# Spolia 交付总览
+# projectAssests 交付总览
 
-**Spolia**（古典建筑术语：从旧建筑拆下、重新砌入新建筑的石材构件）——把历史项目中沉淀的资产重新砌进下一个项目。tagline：「让过去的每一个项目，都成为你未来的可能性」。
+**projectAssests**（古典建筑术语：从旧建筑拆下、重新砌入新建筑的石材构件）——把历史项目中沉淀的资产重新砌进下一个项目。tagline：「让过去的每一个项目，都成为你未来的可能性」。
 
 个人研发资产引擎：扫描本机代码项目 → 抽取资产/能力/关系 → 跨项目洞察 → LLM 分析。单机桌面形态，数据全部存本地 SQLite，无账号体系。
 
@@ -84,7 +84,7 @@
 ```bash
 # 后端（需 MSVC 环境）
 source scripts/msvc-env.sh
-cargo run -p spolia-server            # 默认 127.0.0.1:8787
+cargo run -p projectassests-server            # 默认 127.0.0.1:8787
 
 # 前端
 cd apps/desktop && npm install && npm run dev   # 5174（5173 被本机无关项目占用），代理 /api → 8787
